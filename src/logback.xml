@@ -1,4 +1,4 @@
-<configuration debug="true">
+<configuration>
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
@@ -27,10 +27,24 @@
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
+    <appender name="repository" class="ch.qos.logback.core.rolling.RollingFileAppender">
+<!--        <filter class="ch.qos.logback.classic.filter.LevelFilter">-->
+<!--            <level>ERROR</level>-->
+<!--            <onMatch>ACCEPT</onMatch>-->
+<!--            <onMismatch>DENY</onMismatch>-->
+<!--        </filter>-->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>repository.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
     <root level="info">
         <appender-ref ref="STDOUT"/>
-        <appender-ref ref="rollingLog"/>
-        <appender-ref ref="ERROR"/>
+<!--        <appender-ref ref="rollingLog"/>-->
+<!--        <appender-ref ref="ERROR"/>-->
     </root>
     <logger name="timeBased" level="INFO">
         <appender-ref ref="rollingLog"/>
@@ -38,7 +52,9 @@
     <logger name="test" level="TRACE">
         <appender-ref ref="rollingLog"/>
         <appender-ref ref="ERROR"/>
-        <appender-ref ref="STDOUT"/>
 <!--        <appender-ref ref="STDOUT"/>-->
+    </logger>
+    <logger name="repository" level="INFO">
+        <appender-ref ref="repository"/>
     </logger>
 </configuration>
