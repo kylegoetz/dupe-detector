@@ -98,7 +98,6 @@ class App(private val params: Params) {
         with(params) {
             logger.info("Scanning source path")
             scanPath(sourceRootPath, source).bind() + scanPath(backupRootPath, backup).bind().count()
-            logger.info("Scanning backup path")
             videoMain(arrayOf(sourceRootPath, backupRootPath), sessionId, repository).bind().count()
             logger.info("Doing moves")
             doMoves().bind()
@@ -135,8 +134,8 @@ class ScanPathUseCase(private val params: App.Params) {
         } }
 }
 
-val IMAGE_EXTENSIONS = listOf("jpg", "gif", "jpeg", "cr2", "raw", "png")
-val VIDEO_EXTENSIONS = listOf("avi", "mpg", "mpeg", "mp4", "mov", "3gp")
+val IMAGE_EXTENSIONS = listOf("jpg", "gif", "jpeg", "raw", "png")
+val VIDEO_EXTENSIONS = listOf("avi", "mpg", "mpeg", "mp4", "mov", "3gp", "cr2")
 val FORBIDDEN_PATHS = listOf(".@__thumb", ".aplibrary", ".git", "node_modules")
 
 
