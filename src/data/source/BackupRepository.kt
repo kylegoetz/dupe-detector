@@ -3,6 +3,8 @@ package photo.backup.kt.data.source
 import arrow.core.*
 import arrow.core.extensions.fx
 import ch.frankel.slf4k.trace
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -33,20 +35,24 @@ object BackupRepository : IBackupRepository {
     private var database: Database? = null
 
     fun newInstance(type: RepoType, path: String = "backup_test.db"): IBackupRepository {
-        database =  database ?: when(type) {
-            RepoType.TEST -> Database.connect("jdbc:sqlite::memory:", "org.sqlite.JDBC")
-            RepoType.PROD -> Database.connect("jdbc:sqlite:$path", "org.sqlite.JDBC")
+        val shard = when(type) {
+            RepoType.TEST -> ":memory:"
+            RepoType.PROD -> path
         }
+        val cfg: HikariConfig = HikariConfig().apply {
+            jdbcUrl = "jdbc:sqlite:$shard"
+            maximumPoolSize = 6
+        }
+
+        val dataSource = HikariDataSource(cfg)
+//        database =  database ?: when(type) {
+//            RepoType.TEST -> Database.connect("jdbc:sqlite::memory:", "org.sqlite.JDBC")
+//            RepoType.PROD -> Database.connect("jdbc:sqlite:$path", "org.sqlite.JDBC")
+//        }
+        database = Database.connect(dataSource)
         TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
-        transaction {
+        transaction(database) {
             SchemaUtils.create(HashTable, SourceTable, BackupTable, UnknownFileTable)
-            if(type == RepoType.TEST) { // To keep in-memory DB alive "between" transactions" to forcing the initial transaction to never close
-                GlobalScope.launch {
-                    while(true) {
-                        delay(10000)
-                    }
-                }
-            }
         }
         return this
     }
@@ -257,7 +263,6 @@ object BackupRepository : IBackupRepository {
             EntityFactory.build(it) as SourceFileEntity
         }
     }
-
 }
 
 sealed class RepositoryException {
