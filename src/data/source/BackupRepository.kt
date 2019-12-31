@@ -257,8 +257,7 @@ object BackupRepository : IBackupRepository {
     override suspend fun findSourceByFileSize(size: Long, sessionId: SessionId): List<SourceFileEntity> = transaction {
         logger.trace { "Find source by file size"}
         SourceRow.find {
-            SourceTable.size eq size
-            SourceTable.sessionId eq sessionId.value
+            SourceTable.size eq size and (SourceTable.sessionId eq sessionId.value)
         }.toList().map {
             EntityFactory.build(it) as SourceFileEntity
         }

@@ -127,4 +127,34 @@ internal class BackupRepositoryTest {
         val result = repo.createUnknownFile(file, sessionId)
         assertTrue(result.isLeft())
     }
+    @Test
+    @DisplayName("when no files of same size are in db, findSourceByFileSize returns empty list")
+    fun comparables() {
+        val result = runBlocking { repo.findSourceByFileSize(0, sessionId) }
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    @DisplayName("when a file of different size is in db, fSBFS returns empty list")
+    fun emptyList() = runBlocking {
+        repo.backUp(sourceEntity)
+        val result = repo.findSourceByFileSize(sourceEntity.size+1, sessionId)
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    @DisplayName("when a file of same size is in db, returns list of 1")
+    fun listOfOne() = runBlocking {
+        repo.backUp(sourceEntity)
+        val result = repo.findSourceByFileSize(sourceEntity.size, sessionId)
+        assertEquals(1, result.size)
+    }
+
+    @Test
+    @DisplayName("when a file of same size is in backup, returns empty list")
+    fun doesNotReturnAny() = runBlocking {
+        repo.backUp(backupEntity)
+        val result = repo.findSourceByFileSize(backupEntity.size, sessionId)
+        assertTrue(result.isEmpty())
+    }
 }
