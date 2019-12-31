@@ -1,7 +1,12 @@
 package data.source
 
 import arrow.core.None
+import arrow.core.Option
 import arrow.core.Some
+import arrow.core.extensions.either.applicativeError.handleError
+import arrow.core.getOrHandle
+import io.mockk.coVerify
+import io.mockk.spyk
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -127,6 +132,31 @@ internal class BackupRepositoryTest {
         val result = repo.createUnknownFile(file, sessionId)
         assertTrue(result.isLeft())
     }
+
+    @Test
+    @DisplayName("Upsert Hash adds new hash if hash does not exist yet")
+    fun upsertHashAdds() = runBlocking {
+        assertEquals(None, repo.getHashId(Hash("")))
+        val entity = HashEntity(hash=Hash(""), sessionId=sessionId)
+        val result = repo.upsertHash(entity)
+        assertTrue(repo.getHashId(Hash("")) is Some)
+    }
+
+    @Test
+    @DisplayName("Upsert Hash updates hash with new sessionId if it already exists")
+    fun upsertHashUpdates() = runBlocking {
+        val entity = HashEntity(hash=Hash(""), sessionId=SessionId(UUID.randomUUID()))
+        val updatedEntity = entity.copy(sessionId=sessionId)
+        val id: HashId = repo.addHash(entity).getOrHandle {
+            HashId(UUID.randomUUID())
+        }
+        val secondId: HashId = repo.upsertHash(updatedEntity)
+        assertEquals(id, secondId)
+        val entityOpt: Option<HashEntity> = repo.getHash(secondId)
+        assertTrue(entityOpt is Some)
+        assertEquals(sessionId, (entityOpt as Some).t.sessionId)
+    }
+
     @Test
     @DisplayName("when no files of same size are in db, findSourceByFileSize returns empty list")
     fun comparables() {

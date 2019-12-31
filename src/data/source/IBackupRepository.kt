@@ -8,6 +8,10 @@ import photo.backup.kt.domain.StageType
 import java.io.File
 import java.util.*
 
+sealed class HashResult {
+    object SqliteConstraintUnique: HashResult()
+}
+
 interface IBackupRepository {
     fun disconnect()
     suspend fun backedUp(entity: FileEntity): Option<MediaId>
@@ -17,9 +21,10 @@ interface IBackupRepository {
 
     // Hash
 //    suspend fun getHash(hashId: HashId): Option<HashEntity>
-    suspend fun addHash(hash: HashEntity): HashId
+    suspend fun addHash(hash: HashEntity): Either<HashResult, HashId>
     suspend fun getHashId(hash: Hash): Option<HashId>
     suspend fun getHash(id: HashId): Option<HashEntity>
+    suspend fun upsertHash(hash: HashEntity): HashId
 
     // Backups
 //    suspend fun photoBackedUp(checksum: Hash): Boolean

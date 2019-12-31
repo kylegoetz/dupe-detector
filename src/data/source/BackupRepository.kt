@@ -5,14 +5,13 @@ import arrow.core.extensions.fx
 import ch.frankel.slf4k.trace
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.LoggerFactory
+import org.sqlite.SQLiteException
 import photo.backup.kt.SessionId
 import photo.backup.kt.data.*
 import photo.backup.kt.data.SourceFileTable.absolutePath
@@ -22,13 +21,12 @@ import photo.backup.kt.domain.source
 import java.io.File
 import java.sql.Connection
 import java.util.*
-import javax.sql.DataSource
 
 enum class RepoType {
     PROD, TEST
 }
 
-private val logger = LoggerFactory.getLogger("test")
+private val logger = LoggerFactory.getLogger("repository")
 
 object BackupRepository : IBackupRepository {
 
@@ -134,16 +132,32 @@ object BackupRepository : IBackupRepository {
         }
     }
 
-    override suspend fun addHash(hash: HashEntity): HashId {
-        logger.trace { "Adding a hash" }
-        val id = transaction(database) {
-            HashTable.insert {
-                it[this.hash] = hash.hash.value
-                it[sessionId] = hash.sessionId.value
-            } get HashTable.id
+    override suspend fun upsertHash(entity: HashEntity): HashId = transaction(database) {
+        logger.trace { "Upserting a hash"}
+        val hashes = HashRow.find { HashTable.hash eq entity.hash.value }
+        when(hashes.count()) {
+            0 -> runBlocking {
+                (addHash(entity) as Either.Right).b // This will never be Left because in the same transaction we verify the hash cannot be a duplicate
+            }
+            else -> hashes.forEach { it.sessionId = entity.sessionId.value }.run {
+                HashId(hashes.first().id.value)
+            }
         }
+    }
 
-        return HashId(id.value)
+    override suspend fun addHash(hash: HashEntity): Either<HashResult, HashId> {
+        logger.trace { "Adding a hash" }
+        return try {
+            transaction(database) {
+                HashTable.insert {
+                    it[this.hash] = hash.hash.value
+                    it[sessionId] = hash.sessionId.value
+                } get HashTable.id
+            }.run { Either.Right(HashId(this.value)) }
+        } catch(e: SQLiteException) {
+            logger.error("${e.message}")
+            Either.Left(HashResult.SqliteConstraintUnique)
+        }
     }
 
     override suspend fun getHashId(hash: Hash): Option<HashId> = transaction(database) {
