@@ -31,19 +31,20 @@ class ComputeHashUseCase(private val repository: IBackupRepository, val hasher: 
             logger.trace { "Computing hash for $path"}
             val (hash: Hash) = effect { hasher(data) }
             logger.trace { "Trace computed for $path"}
-            val (result: Option<HashId>) = effect { repository.getHashId(hash) }
-            when (result) {
-                is Some -> {
-                    logger.trace { "Renewing hash for $path"}
-                    !effect { repository.renewHash(result.t, sessionId) }
-                    result.t
-                }
-                is None -> {
-                    logger.trace { "Adding hash for $path" }
-                    val hashEntity = HashEntity(hash, sessionId)
-                    !effect { repository.addHash(hashEntity) }
-                }
-            }
+            !effect { repository.upsertHash(HashEntity(hash, sessionId)) }
+//            val (result: Option<HashId>) = effect { repository.getHashId(hash) }
+//            when (result) {
+//                is Some -> {
+//                    logger.trace { "Renewing hash for $path"}
+//                    !effect { repository.renewHash(result.t, sessionId) }
+//                    result.t
+//                }
+//                is None -> {
+//                    logger.trace { "Adding hash for $path" }
+//                    val hashEntity = HashEntity(hash, sessionId)
+//                    !effect { repository.addHash(hashEntity) }
+//                }
+//            }
         }
     }
 

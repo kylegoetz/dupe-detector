@@ -72,14 +72,19 @@ data class Video(private val sessionId: SessionId, private val repository: IBack
     fun storeBackupVideo(file: File): IO<Either<Throwable, GooglePhotoId>> = IO.fx {
         logger.debug("Hashing and storing video ${file.canonicalPath}")
         val hash = !effect { hasher(file) }
-        val hashOpt = !effect { repository.getHashId(hash) }
-        val hashId = when(hashOpt) {
-            is None -> !effect { repository.addHash(HashEntity(hash, sessionId)) }
-            is Some -> {
-                !effect { repository.renewHash(hashOpt.t, sessionId) }
-                hashOpt.t
-            }
-        }
+        val hashId: HashId = !effect {repository.upsertHash(HashEntity(hash, sessionId))}
+//        val hashOpt = !effect { repository.getHashId(hash) }
+//        val hashId: HashId = when(hashOpt) {
+//            is None -> (!effect { repository.addHash(HashEntity(hash, sessionId)) }).fold({
+//                (!effect { repository.getHashId(hash) } as Some).t
+//            },{
+//                it
+//            })
+//            is Some -> {
+//                !effect { repository.renewHash(hashOpt.t, sessionId) }
+//                hashOpt.t
+//            }
+//        }
         val entity = GoogleFileEntity(
                 absolutePath=file.canonicalPath,
                 size=file.length(),
