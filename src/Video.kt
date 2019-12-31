@@ -14,6 +14,7 @@ import photo.backup.kt.data.source.IBackupRepository
 import java.io.File
 import photo.backup.kt.util.hasher
 import ch.frankel.slf4k.*
+import photo.backup.kt.data.source.HashResult
 
 private val logger = LoggerFactory.getLogger("test")
 
@@ -48,9 +49,16 @@ data class Video(private val sessionId: SessionId, private val repository: IBack
                 files.forEach {
                     logger.debug { "${it.absolutePath} might match ${file.canonicalPath}"}
                     val hash: Hash = !effect { hasher(File(it.absolutePath)) }
-                    val hashId: HashId = !effect { repository.addHash(HashEntity(hash, sessionId))}
-                    val entity = it.copy(hash= Some(hashId), sessionId=sessionId)
+                    val hashId: HashId = !effect { repository.upsertHash(HashEntity(hash, sessionId)) }
+                    val entity = it.copy(hash=Some(hashId), sessionId=sessionId)
                     !effect { repository.update(entity) }
+//                    val hashIdResult: Either<HashResult, HashId> = !effect { repository.addHash(HashEntity(hash, sessionId))}
+//                    hashIdResult.fold({
+//                        logger.error { ""}
+//                    },{ hashId ->
+//                        val entity = it.copy(hash= Some(hashId), sessionId=sessionId)
+//                        !effect { repository.update(entity) }
+//                    })
                 }
                 true
             }
