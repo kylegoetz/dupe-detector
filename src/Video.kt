@@ -149,5 +149,16 @@ fun videoMain(args: Array<String>, sessionId: SessionId, repository: IBackupRepo
 fun walker(root: File): Sequence<File> =
     root.walk().onEnter { dir ->
         logger.debug { "Scanning for videos in $dir" }
-        FORBIDDEN_PATHS.all { !dir.canonicalPath.endsWith(it) }
-    }.filter { it.isFile }
+        FORBIDDEN_PATHS.all { !dir.canonicalPath.endsWith(it) }.also {
+            when(it) {
+                true -> logger.trace { "Scanning $dir"}
+                false -> logger.trace { "Skipping $dir"}
+            }
+        }
+    }.onLeave {
+        logger.trace { "Done scanning for videos in $it"}
+    }.onFail { dir, exception ->
+        logger.error { "Failed to scan $dir: $exception" }
+    }.filter { it.isFile.also { bool ->
+        logger.trace { "Filter is${if(!bool)" not" else ""} allowing $it to be processed"}
+    } }
