@@ -276,6 +276,18 @@ object BackupRepository : IBackupRepository {
             EntityFactory.build(it) as SourceFileEntity
         }
     }
+    /**
+     * entries is a list of File
+     */
+    override suspend fun updateSessionIds(stage: StageType, entries: List<File>, session: SessionId): Int = transaction {
+        val table = when(stage) {
+            source -> SourceTable
+            backup -> BackupTable
+        }
+        table.update({ SourceTable.absolutePath inList(entries.map {it.canonicalPath})}) {
+            it[sessionId] = session.value
+        }
+    }
 }
 
 sealed class RepositoryException {

@@ -53,4 +53,7 @@ interface IBackupRepository {
      * Search source video files for anything with given size
      */
     suspend fun findSourceByFileSize(size: Long, sessionId: SessionId): List<SourceFileEntity>
+
+    // return value is number of rows updated
+    suspend fun updateSessionIds(table: StageType, files: List<File>, session: SessionId): Int
 }
