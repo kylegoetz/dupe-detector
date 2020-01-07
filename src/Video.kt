@@ -29,11 +29,7 @@ data class Video(private val sessionId: SessionId, private val repository: IBack
                 sessionId=sessionId,
                 type= Media.VIDEO
         )
-        val backedUp: Option<MediaId> = !effect { repository.backedUp(sourceFileEntity) }
-        when(backedUp) {
-            is None -> !effect { repository.backUp(sourceFileEntity) }
-            is Some -> { !effect { repository.update(sourceFileEntity)} ; backedUp.t }
-        } as SourcePhotoId
+        !effect { repository.upsertFile(sourceFileEntity) } as SourcePhotoId
     }
 
     /**
