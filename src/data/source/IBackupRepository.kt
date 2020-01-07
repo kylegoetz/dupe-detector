@@ -16,8 +16,9 @@ interface IBackupRepository {
     fun disconnect()
     suspend fun backedUp(entity: FileEntity): Option<MediaId>
     suspend fun backUp(entity: FileEntity): MediaId
-    suspend fun update(entity: FileEntity)
+//    suspend fun update(entity: FileEntity): Boolean
     suspend fun getBackup(path: String, stage: StageType): Option<FileEntity>
+    suspend fun upsertFile(entity: FileEntity): MediaId
 
     // Hash
 //    suspend fun getHash(hashId: HashId): Option<HashEntity>

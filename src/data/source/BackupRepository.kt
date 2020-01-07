@@ -103,8 +103,23 @@ object BackupRepository : IBackupRepository {
         }
     }
 
-    override suspend fun update(entity: FileEntity) = transaction {
-//        addLogger(StdOutSqlLogger)
+    /**
+     * Returns true if updated, false if nothing to update
+     */
+    private suspend fun update(entity: FileEntity): Boolean = transaction {
+        val (row, table) = when(entity) {
+            is GoogleFileEntity -> Pair(BackupRow, BackupTable)
+            is SourceFileEntity -> Pair(SourceRow, SourceTable)
+        }
+        row.findById(entity.id.value)?.run {
+            absolutePath = entity.absolutePath
+            hash = entity.hash.orNull()?.value
+            size = entity.size
+            dateModified = entity.dateModified
+            sessionId = entity.sessionId.value
+            type = entity.type
+            true
+        } ?: false
     }
 
     override suspend fun getFileModificationDate(canonicalPath: String, stage: StageType): Option<Long> = transaction {
@@ -130,6 +145,27 @@ object BackupRepository : IBackupRepository {
         }.firstOrNone().map {
             EntityFactory.build(it)
         }
+    }
+
+    override suspend fun upsertFile(entity: FileEntity): MediaId = transaction {
+        logger.trace { "upserting ${entity.absolutePath}"}
+        val (row, table) = when(entity) {
+            is SourceFileEntity -> Pair(SourceRow, SourceTable)
+            is GoogleFileEntity -> Pair(BackupRow, BackupTable)
+        }
+        row.find {
+            table.absolutePath eq entity.absolutePath
+        }.firstOrNone().fold({
+            logger.trace { "upsert - inserting ${entity.absolutePath} for session ${entity.sessionId}"}
+            val id = runBlocking { backUp(entity) }
+            id
+        },{
+            val id = it.id.value
+            val updatedEntity = entity.changeId(id)
+            logger.trace { "upsert - updating ${updatedEntity.absolutePath} for session ${updatedEntity.sessionId}"}
+            runBlocking { update(updatedEntity) }
+            updatedEntity.id
+        })
     }
 
     override suspend fun upsertHash(entity: HashEntity): HashId = transaction(database) {
