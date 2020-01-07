@@ -1,4 +1,4 @@
-<configuration>
+<configuration debug="true">
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
@@ -43,6 +43,7 @@
     </appender>
     <root level="info">
         <appender-ref ref="STDOUT"/>
+        <appender-ref ref="repository"/>
 <!--        <appender-ref ref="rollingLog"/>-->
 <!--        <appender-ref ref="ERROR"/>-->
     </root>
@@ -50,6 +51,7 @@
         <appender-ref ref="rollingLog"/>
     </logger>
     <logger name="test" level="TRACE">
+        <appender-ref ref="repository"/>
         <appender-ref ref="rollingLog"/>
         <appender-ref ref="ERROR"/>
 <!--        <appender-ref ref="STDOUT"/>-->
