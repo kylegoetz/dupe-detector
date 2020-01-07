@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory
 import org.sqlite.SQLiteException
 import photo.backup.kt.SessionId
 import photo.backup.kt.data.*
-import photo.backup.kt.data.SourceFileTable.absolutePath
+//import photo.backup.kt.data.SourceFileTable.absolutePath
 import photo.backup.kt.domain.StageType
 import photo.backup.kt.domain.backup
 import photo.backup.kt.domain.source
@@ -26,7 +26,7 @@ enum class RepoType {
     PROD, TEST
 }
 
-private val logger = LoggerFactory.getLogger("repository")
+private val logger = LoggerFactory.getLogger("test")
 
 object BackupRepository : IBackupRepository {
 
@@ -221,20 +221,10 @@ object BackupRepository : IBackupRepository {
         HashRow.findById(hashId.value)?.sessionId = sessionId.value
     }
 
-
     override suspend fun pathExists(path: File, isSource: Boolean): Option<UUID> = transaction {
-        with(when(isSource) {
-            true -> SourceRow
-            false -> BackupRow
-        }) {
-            find {
-                absolutePath eq path.canonicalPath
-            }.run {
-                when(count()) {
-                    0 -> None
-                    else ->  Some(first().id.value)
-                }
-            }
+        when(isSource) {
+            true -> sourcePathExists(path).map { it.value }
+            false -> backupPathExists(path).map { it.value }
         }
     }
 
@@ -312,6 +302,27 @@ object BackupRepository : IBackupRepository {
             EntityFactory.build(it) as SourceFileEntity
         }
     }
+
+    private fun sourcePathExists(path: File): Option<SourcePhotoId> = transaction {
+        val result = SourceRow.find {
+            SourceTable.absolutePath eq path.canonicalPath
+        }
+        when(result.count()) {
+            0 -> None
+            else -> Some(SourcePhotoId(result.first().id.value))
+        }
+    }
+
+    private fun backupPathExists(path: File): Option<GooglePhotoId> = transaction {
+        val result = BackupRow.find {
+            BackupTable.absolutePath eq path.canonicalPath
+        }
+        when(result.count()) {
+            0 -> None
+            else -> Some(GooglePhotoId(result.first().id.value))
+        }
+    }
+
     /**
      * entries is a list of File
      */
