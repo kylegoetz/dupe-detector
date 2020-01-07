@@ -1,10 +1,7 @@
 package data.source
 
-import arrow.core.None
-import arrow.core.Option
-import arrow.core.Some
+import arrow.core.*
 import arrow.core.extensions.either.applicativeError.handleError
-import arrow.core.getOrHandle
 import io.mockk.coVerify
 import io.mockk.spyk
 import kotlinx.coroutines.runBlocking
@@ -186,5 +183,71 @@ internal class BackupRepositoryTest {
         repo.backUp(backupEntity)
         val result = repo.findSourceByFileSize(backupEntity.size, sessionId)
         assertTrue(result.isEmpty())
+    }
+
+    @Test
+    @DisplayName("When no files, upsertFile inserts")
+    fun upsertFileInserts() = runBlocking {
+        val opt = repo.backedUp(sourceEntity)
+        assertTrue(opt is None)
+        repo.upsertFile(sourceEntity)
+        val result = repo.backedUp(sourceEntity)
+        assertTrue(result is Some)
+        val ent = repo.getBackup(sourceEntity.absolutePath, source)
+        assertTrue(ent is Some)
+        assertEquals(sourceEntity.sessionId, (ent as Some).t.sessionId)
+    }
+
+    @Test
+    @DisplayName("When there is a file, upsertFile updates")
+    fun upsertFileUpdates() = runBlocking {
+        repo.upsertFile(sourceEntity)
+        repo.upsertFile(sourceEntity.copy(sessionId=SessionId(UUID.randomUUID())))
+        val entity = repo.getBackup(sourceEntity.absolutePath, source)
+        assertTrue(entity is Some)
+        assertNotEquals(sourceEntity.sessionId, (entity as Some).t.sessionId)
+    }
+
+    @Test
+    @DisplayName("Renew hash")
+    fun renewHash() {
+        val entity = HashEntity(Hash(""), sessionId)
+        val either = runBlocking { repo.addHash(entity) }
+        either.fold({
+            assertTrue(false, ("Insertion failed"))
+        }, {
+            val updated = entity.copy(id=Some(it), sessionId=SessionId(UUID.randomUUID()))
+            runBlocking { repo.renewHash(it, updated.sessionId) }
+
+            val storedEntity = runBlocking { repo.getHash(it) }
+            storedEntity.fold({
+                assertTrue(false, "Failed to retrieve row")
+            }, {
+                assertEquals(it.sessionId, updated.sessionId)
+            })
+        })
+    }
+
+    @Test
+    @DisplayName("When three rows are created with different session Ids, updateSessionIds will update them all to a given one")
+    fun updatesSessionIds() = runBlocking {
+        repo.backUp(sourceEntity)
+        repo.backUp(sourceEntity.copy(absolutePath="/foo"))
+        repo.backUp(sourceEntity.copy(absolutePath="/bar"))
+        val newSession = SessionId(UUID.randomUUID())
+
+        val updated = repo.updateSessionIds(source, listOf(sourceEntity.absolutePath, "/foo", "/bar").map { File(it)}, newSession)
+        val checks = listOf(repo.getBackup(sourceEntity.absolutePath, source), repo.getBackup("/foo", source), repo.getBackup("/bar", source)).map {
+            it.fold({
+                SessionId(UUID.randomUUID())
+            },{
+                it.sessionId
+            })
+        }
+
+        assertEquals(3, updated)
+        assertTrue(checks.all { it == newSession })
+
+
     }
 }
