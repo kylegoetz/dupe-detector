@@ -163,7 +163,7 @@ internal class BackupRepositoryTest {
 
     @Test
     @DisplayName("when a file of different size is in db, fSBFS returns empty list")
-    fun emptyList() = runBlocking {
+    fun emptyListReturned() = runBlocking {
         repo.backUp(sourceEntity)
         val result = repo.findSourceByFileSize(sourceEntity.size+1, sessionId)
         assertTrue(result.isEmpty())
@@ -247,7 +247,32 @@ internal class BackupRepositoryTest {
 
         assertEquals(3, updated)
         assertTrue(checks.all { it == newSession })
+    }
 
+    /**
+     * Regression test against a bug where it was erroring out for any batch update of backup because the code referred to SourceTable at one point
+     */
+    @Test
+    @DisplayName("Batch updates session IDs for backup table")
+    fun updatesSessionIdsBackupTable() {
+        runBlocking { repo.updateSessionIds(backup, emptyList(), sessionId) }
+    }
+
+    @Test
+    @DisplayName("getSourceImagesWithBackups does not have multiple instances of a path in its results")
+    fun notRedundant() = runBlocking {
+        val hash = Hash("")
+        val hashId = repo.upsertHash(HashEntity(hash, sessionId))
+        repo.upsertFile(sourceEntity.copy(hash=Some(hashId)))
+        repo.upsertFile(backupEntity.copy(hash=Some(hashId)))
+
+        val items = repo.getSourceImagesWithBackups(sessionId)
+
+        items.fold({
+            assertTrue(false)
+        }, {
+            assertEquals(1, it.size)
+        })
 
     }
 }

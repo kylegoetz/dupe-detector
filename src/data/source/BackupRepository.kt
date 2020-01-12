@@ -243,7 +243,6 @@ object BackupRepository : IBackupRepository {
     override suspend fun getSourceImagesWithBackups(sessionId: SessionId): Either<Throwable, List<SourceFileEntity>> = transaction {
         logger.trace { "Getting source image with backups" }
         Either.fx {
-
             val join = SourceTable.join(BackupTable, JoinType.INNER, SourceTable.hash, BackupTable.hash)
             val query = join.select { SourceTable.sessionId eq sessionId.value }
             query.toList().map {
@@ -326,12 +325,12 @@ object BackupRepository : IBackupRepository {
     /**
      * entries is a list of File
      */
-    override suspend fun updateSessionIds(stage: StageType, entries: List<File>, session: SessionId): Int = transaction {
+    override suspend fun updateSessionIds(stage: StageType, entries: List<File>, session: SessionId): Int = transaction(database) {
         val table = when(stage) {
             source -> SourceTable
             backup -> BackupTable
         }
-        table.update({ SourceTable.absolutePath inList(entries.map {it.canonicalPath})}) {
+        table.update({ table.absolutePath inList(entries.map {it.canonicalPath})}) {
             it[sessionId] = session.value
         }
     }
