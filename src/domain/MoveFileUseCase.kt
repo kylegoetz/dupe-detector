@@ -9,11 +9,11 @@ import java.nio.file.Path
 import ch.frankel.slf4k.*
 import org.slf4j.Logger
 
-private val logger: Logger = LoggerFactory.getLogger("test")
+typealias MoveFileUseCase = (SourceFileEntity)->IO<Either<Throwable, Path>>
 
-class MoveFileUseCase(private val targetPath: String, internal val mover: suspend (String, File) -> Either<Throwable, Path>) {
-    operator fun invoke(file: SourceFileEntity): IO<Either<Throwable, Path>> = IO.effect {
-        logger.info { "Moving ${file.absolutePath} to $targetPath"}
-        mover(targetPath, File(file.absolutePath))
-    }
+fun generateMoveFileUseCase(targetPath: String, mover: (String, File)->IO<Either<Throwable, Path>>): (SourceFileEntity)->IO<Either<Throwable, Path>> = {
+    mover(targetPath, File(it.absolutePath))
 }
+
+@Suppress("UNUSED_PARAMETER")
+private val logger: Logger = LoggerFactory.getLogger("test")
