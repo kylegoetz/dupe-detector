@@ -17,6 +17,7 @@ abstract class BaseUseCaseTest<T> {
     @MockK protected lateinit var repo: IBackupRepository
 
     protected lateinit var sourceEntity: SourceFileEntity
+    protected val sessionId = SessionId(UUID.randomUUID())
 
     @BeforeEach
     fun setup() {
