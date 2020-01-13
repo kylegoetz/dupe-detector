@@ -7,14 +7,8 @@ import photo.backup.kt.SessionId
 import photo.backup.kt.data.SourceFileEntity
 import photo.backup.kt.data.source.IBackupRepository
 
-class ListDupesUseCase(private val repository: IBackupRepository, private val sessionId: SessionId) {
-    operator fun invoke(): IO<List<SourceFileEntity>> = IO.fx {
-        effect { repository.getSourceImagesWithBackups(sessionId) }.bind().getOrElse {
-            emptyList()
-        }
+fun generateListDupesUseCase(repository: IBackupRepository, sessionId: SessionId): ()->IO<List<SourceFileEntity>> = {
+    IO.effect { repository.getSourceImagesWithBackups(sessionId) }.map {
+        it.getOrElse { emptyList() }
     }
-}
-
-sealed class ListDupesExceptions {
-    object NoDupesFound: ListDupesExceptions()
 }
