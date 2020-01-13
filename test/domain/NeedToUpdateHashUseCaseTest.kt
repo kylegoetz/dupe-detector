@@ -1,7 +1,9 @@
 package photo.backup.kt.domain
 
-import arrow.fx.IO
+import arrow.core.None
+import arrow.core.Some
 import io.mockk.coEvery
+import io.mockk.spyk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -9,27 +11,45 @@ import org.junit.jupiter.api.Test
 import java.io.File
 
 class NeedToUpdateHashUseCaseTest: BaseUseCaseTest<NeedToUpdateHashUseCase>() {
-    override lateinit var case: NeedToUpdateHashUseCase
+    override lateinit var SUT: NeedToUpdateHashUseCase
+    lateinit var file: File
 
     @BeforeEach
-    override fun configureSystemUnderTest() {
-        case = NeedToUpdateHashUseCase(repo)
+    override fun configureSUT() {
+        SUT = generateNeedToUpdateHashUseCase(repo)
+        file = spyk(File(""))
     }
 
     @Test
-    @DisplayName("Returns false when repo returns false")
-    fun returnsFalse() {
-        coEvery { repo.isFileChanged(any(), any()) } returns false
-        val result = case(File("")).unsafeRunSync()
-        assertEquals(false, result)
-    }
+    @DisplayName("Returns false when getFileModificationDate returns None")
+    fun noFileInDb() {
+        coEvery { repo.getFileModificationDate(any(), any())} returns None
 
-    @Test
-    @DisplayName("Returns true when repo returns true")
-    fun returnsTrue() {
-        coEvery { repo.isFileChanged(any(), any())} returns true
-        val result = case(File("")).unsafeRunSync()
+        val result = SUT(file, source).unsafeRunSync()
+
         assertEquals(true, result)
+    }
+
+    @Test
+    @DisplayName("Returns true when getFileModificationDate returns a # smaller than file's modification date")
+    fun returnsFalse() {
+        coEvery { repo.getFileModificationDate(any(), any()) } returns Some(0)
+        coEvery { file.lastModified() } returns 1
+
+        val result = SUT(file, source).unsafeRunSync()
+
+        assertEquals(true, result)
+    }
+
+    @Test
+    @DisplayName("Returns false when getFileModificationDate returns a # equal to file's modification date")
+    fun returnsTrue() {
+        coEvery { repo.getFileModificationDate(any(), any())} returns Some(0)
+        coEvery { file.lastModified() } returns 0
+
+        val result = SUT(file, source).unsafeRunSync()
+
+        assertEquals(false, result)
     }
 
 }

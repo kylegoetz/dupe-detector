@@ -6,17 +6,15 @@ import org.slf4j.LoggerFactory
 import photo.backup.kt.data.source.IBackupRepository
 import java.io.File
 
-private val logger = LoggerFactory.getLogger("test")
-class NeedToUpdateHashUseCase(private val repository: IBackupRepository) {
-    operator fun invoke(file: File, stage: StageType): IO<Boolean> = IO {
-        logger.trace { "Must we re-hash this file?"}
-        repository.getFileModificationDate(file.canonicalPath, stage).fold({
-            logger.trace{"Yes"}
-            true
-        }, {
-            (file.lastModified() > it).also {
-                if(it) logger.trace{"Yes"} else logger.trace{"No"}
-            }
-        })
+
+fun generateNeedToUpdateHashUseCase(repository: IBackupRepository): (File, StageType)->IO<Boolean> {
+    return { file, stage ->
+        IO.effect {
+            repository
+                .getFileModificationDate(file.canonicalPath, stage)
+                .fold({ true },{ file.lastModified() > it })
+        }
     }
 }
+typealias NeedToUpdateHashUseCase = (File, StageType) -> IO<Boolean>
+private val logger = LoggerFactory.getLogger("test")
