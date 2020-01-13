@@ -13,8 +13,8 @@ import photo.backup.kt.data.source.IBackupRepository
 import java.util.*
 
 abstract class BaseUseCaseTest<T> {
-    abstract var case: T
-    @MockK private lateinit var repo: IBackupRepository
+    abstract var SUT: T
+    @MockK protected lateinit var repo: IBackupRepository
 
     protected lateinit var sourceEntity: SourceFileEntity
 
@@ -30,4 +30,7 @@ abstract class BaseUseCaseTest<T> {
             id = SourcePhotoId(UUID.randomUUID()),
             sessionId = SessionId(UUID.randomUUID()))
     }
+
+    @BeforeEach
+    abstract fun configureSUT()
 }
