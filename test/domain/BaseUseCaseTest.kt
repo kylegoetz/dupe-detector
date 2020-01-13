@@ -30,6 +30,7 @@ abstract class BaseUseCaseTest<T> {
             type = Media.IMAGE,
             id = SourcePhotoId(UUID.randomUUID()),
             sessionId = SessionId(UUID.randomUUID()))
+        configureSUT()
     }
 
     @BeforeEach
