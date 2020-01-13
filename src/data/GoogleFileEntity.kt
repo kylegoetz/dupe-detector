@@ -25,8 +25,10 @@ sealed class FileEntity {
     abstract val sessionId: SessionId
     abstract val type: Media
 
+    abstract fun changeId(id: UUID): FileEntity
     abstract fun changeId(id: MediaId): FileEntity
     abstract fun copy(sessionId: SessionId): FileEntity
+    abstract fun changeHashId(id: Option<HashId>): FileEntity
 }
 
 object EntityFactory {
@@ -35,22 +37,18 @@ object EntityFactory {
             is SourceRow -> source
             is BackupRow -> backup
         }
-        return build(stage, File(row.absolutePath), row.hash?.run { Some(HashId(this)) } ?: None, row.type)
+
+        return build(stage, File(row.absolutePath), row.hash?.run { Some(HashId(this)) } ?: None, row.type, SessionId(row.sessionId))
     }
 
-    fun build(stage: StageType, file: File, type: Media) = build(stage, file, None, type)
-
-    fun build(stage: StageType, file: File, hashId: HashId, type: Media): FileEntity =
-            build(stage, file, Some(hashId), type)
-
-    fun build(stage: StageType, file: File, hashId: Option<HashId>, type: Media): FileEntity {
+    fun build(stage: StageType, file: File, hashId: Option<HashId>, type: Media, sessionId: SessionId): FileEntity {
         return when(stage) {
             is source -> SourceFileEntity(
                     absolutePath =file.canonicalPath,
                     hash =hashId,
                     size =file.length(),
                     dateModified =file.lastModified(),
-                    sessionId = SessionId(UUID.randomUUID()),
+                    sessionId = sessionId,
                     type = type
             )
             is backup -> GoogleFileEntity(
@@ -58,7 +56,7 @@ object EntityFactory {
                     hash =hashId,
                     size =file.length(),
                     dateModified =file.lastModified(),
-                    sessionId = SessionId(UUID.randomUUID()),
+                    sessionId = sessionId,
                     type = type
             )
         }
@@ -75,7 +73,9 @@ data class GoogleFileEntity(
         override val id: GooglePhotoId = GooglePhotoId(UUID.randomUUID())
 ): FileEntity() {
     override fun changeId(id: MediaId) = copy(id=id as GooglePhotoId)
+    override fun changeId(id: UUID) = copy(id=GooglePhotoId(id))
     override fun copy(sessionId: SessionId): GoogleFileEntity = copy(sessionId=sessionId, id=id)
+    override fun changeHashId(id: Option<HashId>): GoogleFileEntity = copy(hash=id)
 }
 
 data class SourceFileEntity(
@@ -87,16 +87,10 @@ data class SourceFileEntity(
     override val type: Media,
     override val id: SourcePhotoId = SourcePhotoId(UUID.randomUUID())
 ): FileEntity() {
+    override fun changeId(id: UUID) = copy(id=SourcePhotoId(id))
     override fun changeId(id: MediaId) = copy(id=id as SourcePhotoId)
     override fun copy(sessionId: SessionId): SourceFileEntity = copy(sessionId=sessionId, id=id)
-//    constructor(row: SourceRow) : this(
-//            row.absolutePath,
-//            row.hash?.run { Some(HashId(this)) } ?: None,
-//            row.size,
-//            row.dateModified,
-//            SessionId(row.sessionId),
-//            row.type,
-//            SourcePhotoId(row.id.value))
+    override fun changeHashId(id: Option<HashId>): SourceFileEntity = copy(hash=id)
 }
 
 enum class Media {
