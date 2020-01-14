@@ -15,7 +15,6 @@ import ch.frankel.slf4k.info
 import ch.frankel.slf4k.trace
 import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.core.util.StatusPrinter
-import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import photo.backup.kt.data.*
 import photo.backup.kt.data.source.IBackupRepository
@@ -23,7 +22,9 @@ import photo.backup.kt.data.source.BackupRepository
 import photo.backup.kt.data.source.RepoType
 import photo.backup.kt.domain.*
 import photo.backup.kt.photo.backup.kt.domain.RenewFileUseCase
+import java.awt.image.BufferedImage
 import java.io.File
+import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Files.createDirectories
 import java.nio.file.Path
@@ -35,261 +36,268 @@ import kotlin.system.measureTimeMillis
 
 inline class SessionId(val value: UUID)
 
+//fun doMoves(getDupeListUC: ListDupesUseCase, moveDupesUC: MoveFileUseCase): IO<List<Either<Throwable, Path>>> = IO.fx {
+//    val sourceList = getDupeListUC().bind()
+//    sourceList.k().traverse(IO.applicative()) { moveDupesUC(it) }.fix().bind()
+//}
+
+//fun scanner(path: String, stage: StageType, batchUpdateSessionUseCase: BatchUpdateSessionUseCase) = IO.fx {
+//    scanPath(path, stage)
+//        .bind()
+//        .map { it.unsafeRunSync() }
+//        .toList()
+//        .mapNotNull{it.orNull()}
+//        .let{batchUpdateSessionUseCase(stage, it)}
+//}
+
+//fun scan(path1: String, path2: String, batchUpdateSessionUseCase: BatchUpdateSessionUseCase) = IO.fx {
+//    scanner(path1, source, batchUpdateSessionUseCase)
+//    scanner(path2, backup, batchUpdateSessionUseCase)
+//
+//}
+
+//private fun scanPath(path: String, stage: StageType): IO<Sequence<IO<Option<File>>>> = IO.fx {
+//    val (filesSeq: Sequence<File>) = scanDirectoryUseCase(path)
+//    /*val programs: Sequence<IO<Option<File>>> = */filesSeq.map { file ->
+//    val mediaTypeOpt = getMediaTypeUseCase(file)
+//    mediaTypeOpt.fold({
+//        storeUnknownFileRefUseCase(file).map { arrow.core.None }
+//    }, { mediaType ->
+//        arrow.fx.IO.fx {
+//            val update: Boolean = needToUpdateHashUseCase(file, stage).bind()
+//            if (update) {
+//                val (data: Either<Throwable, ByteArray>) = getDataUseCase(
+//                    photo.backup.kt.domain.GetDataUseCase.Params(
+//                        file,
+//                        mediaType
+//                    )
+//                )
+//                data.fold({
+//                    photo.backup.kt.logger.error { "Could not read in the file ${file.canonicalPath}: $it" }
+//                    arrow.core.None
+//                }, {
+//                    val (hashId: HashId) = hashUseCase(it, file.canonicalPath, file.lastModified(), stage)
+//                    val myFile = photo.backup.kt.data.EntityFactory.build(
+//                        stage, file,
+//                        arrow.core.Some(hashId), mediaType
+//                    ).copy(sessionId)
+////                            Some(savePhotoUseCase(myFile).bind())
+//                    savePhotoUseCase(myFile).bind()
+//                    arrow.core.None
+//                })
+//            } else {
+//                photo.backup.kt.logger.trace { "Skipping re-hashing of ${file.name}" }
+////                        renewFileUseCase(file, stage).bind()
+////                        None
+//                arrow.core.Some(file)
+//            }
+//        }
+//    })
+//}
+////        val results: List<Option<File>> = programs.asList().map { it.unsafeRunSync() }
+//} }
+
 //private val logger: Logger = LoggerFactory.getLogger("test")
 
 private val logger = LoggerFactory.getLogger("test")
 
-class App(private val params: Params) {
+//class App(private val params: Params) {
+//
+//    data class Params(val sourceRootPath: String,
+//                      val backupRootPath: String,
+//                      val scanDirectoryUseCase: ScanDirectoryUseCase,
+//                      val hashUseCase: ComputeHashUseCase,
+//                      val getMediaTypeUseCase: DetermineMediaTypeUseCase,
+//                      val savePhotoUseCase: SavePhotoUseCase,
+//                      val getDataUseCase: GetDataUseCase,
+//                      val getDupeListUseCase: ListDupesUseCase,
+//                      val moveDupesUseCase: MoveFileUseCase,
+//                      val storeUnknownFileRefUseCase: StoreUnknownFileRefUseCase,
+//                      val sessionId: SessionId,
+//                      val needToUpdateHashUseCase: NeedToUpdateHashUseCase,
+//                      val renewFileUseCase: RenewFileUseCase,
+//                      val batchUpdateSessionUseCase: BatchUpdateSessionUseCase
+//    )
+//
+//    private fun scanPath(path: String, stage: StageType): IO<Sequence<IO<Option<File>>>> = with(params){IO.fx {
+//        val (filesSeq: Sequence<File>) = scanDirectoryUseCase(path)
+//        /*val programs: Sequence<IO<Option<File>>> = */filesSeq.map { file ->
+//            val mediaTypeOpt = getMediaTypeUseCase(file)
+//            mediaTypeOpt.fold({
+//                storeUnknownFileRefUseCase(file).map { None }
+//            },{ mediaType ->
+//                IO.fx {
+//                    val update: Boolean = needToUpdateHashUseCase(file, stage).bind()
+//                    if(update) {
+//                        val (data: Either<Throwable, ByteArray>) = getDataUseCase(GetDataUseCase.Params(file, mediaType))
+//                        data.fold({
+//                            logger.error { "Could not read in the file ${file.canonicalPath}: $it" }
+//                            None
+//                        },{
+//                            val (hashId: HashId) = hashUseCase(it, file.canonicalPath, file.lastModified(), stage)
+//                            val myFile = EntityFactory.build(stage, file, Some(hashId), mediaType).copy(sessionId)
+////                            Some(savePhotoUseCase(myFile).bind())
+//                            savePhotoUseCase(myFile).bind()
+//                            None
+//                        })
+//                    } else {
+//                        logger.trace { "Skipping re-hashing of ${file.name}"}
+////                        renewFileUseCase(file, stage).bind()
+////                        None
+//                        Some(file)
+//                    }
+//                }
+//            })
+//        }
+//
+////        val results: List<Option<File>> = programs.asList().map { it.unsafeRunSync() }
+//    } }
+//
+//    fun execute(): IO<Unit> = IO.fx {
+//        with(params) {
+//            logger.info("Scanning source path $sourceRootPath")
+//            val programs = scanPath(sourceRootPath, source).bind()
+//            val filesOpt: List<Option<File>> = programs.map { it.unsafeRunSync() }.toList()
+//            val files: List<File> = filesOpt.mapNotNull { it.orNull() }
+//            batchUpdateSessionUseCase(source, files).bind()
+//
+//            logger.info("Scanning backup path $backupRootPath")
+//            val backupPrograms = scanPath(backupRootPath, backup).bind()
+//            val backupFiles = backupPrograms.map { it.unsafeRunSync() }.toList().mapNotNull { it.orNull() }
+//            batchUpdateSessionUseCase(backup, backupFiles).bind()
+//
+////            videoMain(arrayOf(sourceRootPath, backupRootPath), sessionId, repository).bind().count()
+//            logger.info("Doing moves")
+//            doMoves(getDupeListUseCase, moveDupesUseCase).bind()
+//            Unit
+//        }
+//    }
+//}
 
-    data class Params(val sourceRootPath: String,
-                      val backupRootPath: String,
-                      val getFilesUseCase: ScanDirectoryUseCase,
-                      val hashUseCase: ComputeHashUseCase,
-                      val getMediaTypeUseCase: DetermineMediaTypeUseCase,
-                      val insertUseCase: SavePhotoUseCase,
-                      val getDataUseCase: GetDataUseCase,
-                      val getDupeListUseCase: ListDupesUseCase,
-                      val moveDupesUseCase: MoveFileUseCase,
-                      val storeUnknownFileRefUseCase: StoreUnknownFileRefUseCase,
-                      val sessionId: SessionId,
-                      val needToUpdateHashUseCase: NeedToUpdateHashUseCase,
-                      val renewFileUseCase: RenewFileUseCase
-    )
-
-    private fun scanPath(path: String, stage: StageType): IO<Sequence<Option<MediaId>>> = with(params){IO.fx {
-        val (filesSeq: Sequence<File>) = getFilesUseCase(path)
-        val programs: Sequence<IO<Option<MediaId>>> = filesSeq.map { file ->
-            val mediaTypeEither = getMediaTypeUseCase(file)
-            mediaTypeEither.fold({
-                storeUnknownFileRefUseCase(file).map { None }
-            },{ mediaType ->
-                IO.fx {
-                    val update: Boolean = needToUpdateHashUseCase(file, stage).bind()
-                    if(update) {
-                        val (data: Either<Throwable, ByteArray>) = getDataUseCase(GetDataUseCase.Params(file, mediaType))
-                        data.fold({
-                            logger.error { "Could not read in the file ${file.canonicalPath}: $it" }
-                            None
-                        },{
-                            val (hashId: HashId) = hashUseCase(it, file.canonicalPath, file.lastModified(), stage)
-                            val myFile = EntityFactory.build(stage, file, Some(hashId), mediaType).copy(sessionId)
-                            Some(insertUseCase(myFile).bind())
-                        })
-                    } else {
-                        logger.trace { "Skipping re-hashing of ${file.name}"}
-                        renewFileUseCase(file, stage)
-                        None
-                    }
-                }
-            })
-        }
-        programs.map { it.unsafeRunSync() }
-    } }
-
-    private fun doMoves(): IO<List<Either<Throwable, Path>>> =
-        params.getDupeListUseCase().flatMap { list ->
-            logger.info("Going to move ${list.size} dupes")
-            list.k().traverse(IO.applicative()) { file ->
-                params.moveDupesUseCase(file)
-            }.fix()
-        }
-
-    fun execute(): IO<Unit> = IO.fx {
-        with(params) {
-            logger.info("Scanning source path")
-            scanPath(sourceRootPath, source).bind() + scanPath(backupRootPath, backup).bind().count()
-            videoMain(arrayOf(sourceRootPath, backupRootPath), sessionId, repository).bind().count()
-            logger.info("Doing moves")
-            doMoves().bind()
-            Unit
-        }
-    }
-}
-
-class ScanPathUseCase(private val params: App.Params) {
-    operator fun invoke(path: File, stage: StageType): IO<Sequence<Option<MediaId>>> = with(params){
-        IO.fx {
-            val (filesSeq: Sequence<File>) = getFilesUseCase(path.canonicalPath)
-            val programs: Sequence<IO<Option<MediaId>>> = filesSeq.map { file ->
-                logger.debug { "Processing ${file.canonicalPath}"}
-                logger.trace { "Media type?" }
-                val mediaTypeEither = getMediaTypeUseCase(file)
-                mediaTypeEither.fold({
-                    logger.trace { "It was unknown type"}
-                    storeUnknownFileRefUseCase(file).map { None }
-                },{ mediaType ->
-                    IO.fx {
-                        val (data: Either<Throwable, ByteArray>) = getDataUseCase(GetDataUseCase.Params(file, mediaType))
-                        data.fold({
-                            None
-                        },{
-                            val (hashId: HashId) = hashUseCase(it, file.canonicalPath, file.lastModified(), stage)
-                            val myFile = EntityFactory.build(stage, file, Some(hashId), mediaType).copy(sessionId)
-                            Some(insertUseCase(myFile).bind())
-                        })
-                    }
-                })
-            }
-            programs.map { it.unsafeRunSync() }
-        } }
-}
-
-val IMAGE_EXTENSIONS = listOf("jpg", "gif", "jpeg", "raw", "png")
+val IMAGE_EXTENSIONS = listOf("jpg", "gif", "jpeg", "raw", "png", "tiff")
 val VIDEO_EXTENSIONS = listOf("avi", "mpg", "mpeg", "mp4", "mov", "3gp", "cr2")
 val FORBIDDEN_PATHS = listOf(".@__thumb", ".aplibrary", ".git", "node_modules")
 
 
-private var walker: (String) -> Sequence<File> = {
-    File(it).walk().onEnter { dir ->
-        logger.debug { "Scanning for files in $dir" }
-        FORBIDDEN_PATHS.all { !dir.canonicalPath.endsWith(it) }
-    }.filter { it.isFile && it.extension.toLowerCase() `in` IMAGE_EXTENSIONS }
-}
-private var hasher: suspend (ByteArray) -> Hash = { data ->
-    val md5 = MessageDigest.getInstance("MD5")
-    md5.update(data)
-    val digest = md5.digest()
-    Hash(DatatypeConverter.printHexBinary(digest).toUpperCase())
-}
-
-sealed class BackupExceptions {
-    object NoSourceRoot: BackupExceptions()
-    object NoBackupRoot: BackupExceptions()
-    object NoDestinationRoot: BackupExceptions()
-    object Crawling: BackupExceptions()
-}
+//private var walker: (String) -> Sequence<File> = {
+//    File(it).walk().onEnter { dir ->
+//        logger.debug { "Scanning for files in $dir" }
+//        FORBIDDEN_PATHS.all { !dir.canonicalPath.endsWith(it) }
+//    }.filter {
+//        (it.isFile && it.extension.toLowerCase() `in` IMAGE_EXTENSIONS).also { allow ->
+//            when(allow) {
+//                true -> logger.debug { "Image walker is allowing $it"}
+//                false -> logger.debug { "Image walker is filtering out $it"}
+//            }
+//        }
+//    }
+//}
+//private var hasher: suspend (ByteArray) -> Hash = { data ->
+//    val md5 = MessageDigest.getInstance("MD5")
+//    md5.update(data)
+//    val digest = md5.digest()
+//    Hash(DatatypeConverter.printHexBinary(digest).toUpperCase())
+//}
 
 fun main(args: Array<String>) {
+    main(args[0], args[1], args[2])
+}
 
-    val lc = LoggerFactory.getILoggerFactory() as LoggerContext
-    StatusPrinter.print(lc)
-
-    val sessionId = SessionId(UUID.randomUUID())
-
-//    argsParser(args).fold({
-//        println("Could not run program because $it")
-//    },{
-//        val (sourceRoot, backupRoot, destinationRoot) = it
-//        val params = App.Params(
-//                "",
-//                "",
+//fun main(args: Array<String>) {
+//    val arguments = argsParser(args)
+//
+//    val sessionId = SessionId(UUID.randomUUID())
+//
+//    val scanVideoUseCase = ScanVideoUseCase(::walker)
+//    val storeVideoUseCase = StoreVideoUseCase(repository, sessionId, ::generateMD5)
+//    val shouldStoreBackupVideoUseCase = ShouldStoreBackupVideoUseCase(repository, sessionId, ::generateMD5)
+//    val videoRunner = createRunner({scanVideoUseCase(it)}, {storeVideoUseCase(it)}, {shouldStoreBackupVideoUseCase(it)})
+//
+//    argsParser(args).map { paths ->
+//        if(paths.source is Some && paths.backup is Some) {
+//            App(App.Params(
+//                paths.source.t.canonicalPath,
+//                paths.backup.t.canonicalPath,
 //                ScanDirectoryUseCase(walker),
 //                ComputeHashUseCase(repository, hasher, sessionId),
 //                DetermineMediaTypeUseCase(),
 //                SavePhotoUseCase(repository, sessionId),
 //                GetDataUseCase({x->imageReader(x)}, videoReader),
 //                ListDupesUseCase(repository, sessionId),
-//                MoveFileUseCase(destinationRoot, mover),
+//                MoveFileUseCase(paths.destination.fold({File("")}, {it}).canonicalPath) {a: String,b:File -> mover(a,b)},
 //                StoreUnknownFileRefUseCase(repository, sessionId),
-//                sessionId
-//        )
-//        val scan = ScanPathUseCase(params)
-//        sourceRoot.map { scan(it, source) }
-//        backupRoot.map { scan(it, backup) }
-//    })
-
-    val sourceRootIO: IO<Either<BackupExceptions, String>> = IO { args[0] }.attempt()
-            .map { it.mapLeft { BackupExceptions.NoSourceRoot } }
-    val backupRootIO: IO<Either<BackupExceptions, String>> = IO { args[1] }.attempt()
-            .map { it.mapLeft { BackupExceptions.NoBackupRoot}}
-    val destinationRootIO: IO<Either<BackupExceptions, String>> = IO { args[2] }.attempt().map { it.mapLeft { BackupExceptions.NoDestinationRoot }}
-
-//    sourceRootIO.map {
-//        it.map {sourcePathStr ->
-//            backupRootIO.map {
-//                it.map{backupPathStr ->
-//                    destinationRootIO.map {
-//                        it.map { destinationPathStr ->
-//
-//                        }
-//                    }
-//                }
-//            }
+//                sessionId,
+//                NeedToUpdateHashUseCase(repository),
+//                RenewFileUseCase(repository, sessionId),
+//                BatchUpdateSessionUseCase(repository, sessionId)
+//            )).execute()
+//            videoRunner(paths, sessionId, repository)
 //        }
 //    }
+//
+////    val lc = LoggerFactory.getILoggerFactory() as LoggerContext
+////    StatusPrinter.print(lc)
+//
+//    val sourceRootIO: IO<Either<BackupExceptions, String>> = IO { args[0] }.attempt()
+//            .map { it.mapLeft { BackupExceptions.NoSourceRoot } }
+//    val backupRootIO: IO<Either<BackupExceptions, String>> = IO { args[1] }.attempt()
+//            .map { it.mapLeft { BackupExceptions.NoBackupRoot}}
+//    val destinationRootIO: IO<Either<BackupExceptions, String>> = IO { args[2] }.attempt().map { it.mapLeft { BackupExceptions.NoDestinationRoot }}
+//
+//    val app: IO<Unit> = IO.fx {
+//        val sourceRoot = sourceRootIO.bind()
+//        logger.trace{ "Source is $sourceRoot"}
+//        val backupRoot = backupRootIO.bind()
+//        logger.trace { "Backup is $backupRoot"}
+//        val destinationRoot: String = destinationRootIO.bind().fold({ File("").canonicalPath }, { File(it).canonicalPath })
+//        logger.trace { "Destination is $destinationRoot" }
+//        if(sourceRoot is Either.Right && backupRoot is Either.Right) {
+//            logger.trace { "Building application" }
+//            val app = App(App.Params(
+//                sourceRoot.b,
+//                backupRoot.b,
+//                ScanDirectoryUseCase(walker),
+//                ComputeHashUseCase(repository, hasher, sessionId),
+//                DetermineMediaTypeUseCase(),
+//                SavePhotoUseCase(repository, sessionId),
+//                GetDataUseCase({x->imageReader(x)}, videoReader),
+//                ListDupesUseCase(repository, sessionId),
+//                MoveFileUseCase(destinationRoot) {a: String,b:File -> mover(a,b)},
+//                StoreUnknownFileRefUseCase(repository, sessionId),
+//                sessionId,
+//                NeedToUpdateHashUseCase(repository),
+//                RenewFileUseCase(repository, sessionId),
+//                BatchUpdateSessionUseCase(repository, sessionId)
+//            ))
+//            logger.info { "Application built"}
+//            app.execute().bind()
+//        }
+//    }
+//    measureTimeMillis {
+//        app.unsafeRunSync()
+//    }.run { println("Execution took ${this/1000} seconds") }
+//
+//}
 
-    val app: IO<Unit> = IO.fx {
-        val sourceRoot = sourceRootIO.bind()
-        logger.trace{ "Source is $sourceRoot"}
-        val backupRoot = backupRootIO.bind()
-        logger.trace { "Backup is $backupRoot"}
-        val destinationRoot: String = destinationRootIO.bind().fold({ File("").canonicalPath }, { File(it).canonicalPath })
-        logger.trace { "Destination is $destinationRoot" }
-        if(sourceRoot is Either.Right && backupRoot is Either.Right) {
-            logger.trace { "Building application" }
-            val app = App(App.Params(
-                    sourceRoot.b,
-                    backupRoot.b,
-                    ScanDirectoryUseCase(walker),
-                    ComputeHashUseCase(repository, hasher, sessionId),
-                    DetermineMediaTypeUseCase(),
-                    SavePhotoUseCase(repository, sessionId),
-                    GetDataUseCase({x->imageReader(x)}, videoReader),
-                    ListDupesUseCase(repository, sessionId),
-                    MoveFileUseCase(destinationRoot, mover),
-                    StoreUnknownFileRefUseCase(repository, sessionId),
-                    sessionId,
-                    NeedToUpdateHashUseCase(repository),
-                    RenewFileUseCase(repository, sessionId)
-            ))
-            logger.info { "Application built"}
-            app.execute().bind()
-        }
-    }
-    measureTimeMillis {
-        app.unsafeRunSync()
-    }.run { println("Execution took ${this/1000} seconds") }
 
-}
+//suspend fun mover(destStr: String, toMove: File): Either<Throwable, Path> = Either.catch {
+//    val dest = customResolve(destStr, toMove)
+//    createDirectories(dest.parent)
+//    Files.move(toMove.toPath(), dest)
+//    dest
+//}
 
-
-/**
- * Currently have no better way to hash a video's data except to hash the whole file
- */
-val videoReader: suspend (File)->ByteArray = {
-    println("Read video ${it.canonicalPath}")
-    it.readBytes()
-}
-
-val mover: suspend (destStr: String, toMove: File)->Either<Throwable, Path> = { destStr, it ->
-    Either.fx {
-        val dest: Path = customResolve(destStr, it)
-        val parentPath = dest.parent
-        createDirectories(parentPath)
-        Files.move(it.toPath(), dest)
-        dest
-    }
-}
-
-private val repository: IBackupRepository = BackupRepository.newInstance(RepoType.PROD)
-
-private fun customResolve(base: String, toCopy: File): Path {
-    return File(base).toPath().resolve(".${toCopy.canonicalPath}")
-}
-
-/**
- * This should fetch purely the image data and nothing else
- */
-
-fun imageReader(file: File): IO<Either<Throwable, ByteArray>> = IO.fx {
-    with(!effect { ImageIO.read(file) }) {
-        val argbArray = getRGB(0,0, width, height,null,0, width)
-        val buffer = java.nio.ByteBuffer.allocate(4*argbArray.size)
-        argbArray.forEach { buffer.putInt(it) }
-        buffer.flip()
-        buffer.array().slice(0 until argbArray.size*4).toByteArray()
-    }
-}.attempt()
-
-//private val imageReader: suspend (File)->ByteArray = {
-//    with(ImageIO.read(it)) {
-//        val argbArray = getRGB(0,0, width, height,null,0, width)
-//        val buffer = ByteBuffer.allocate(4*argbArray.size)
-//        argbArray.forEach { buffer.putInt(it) }
-//        buffer.flip()
-//        buffer.array().slice(0 until argbArray.size*4).toByteArray()
+//val mover: suspend (destStr: String, toMove: File)->Either<Throwable, Path> = { destStr, it ->
+//    Either.catch {
+//        val dest: Path = customResolve(destStr, it)
+//        val parentPath = dest.parent
+//        createDirectories(parentPath)
+//        Files.move(it.toPath(), dest)
+//        dest
 //    }
 //}
+
+private val repository: IBackupRepository = BackupRepository.newInstance(RepoType.PROD)
 
 data class PathArgs(val source: Option<File>, val backup: Option<File>, val destination: Option<File>)
 
