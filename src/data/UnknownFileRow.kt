@@ -20,9 +20,3 @@ object UnknownFileTable: UUIDTable() {
     val extension = varchar("file_extension", 50)
     val session = uuid("session_id")
 }
-
-data class UnknownFile(val file: File, val session: SessionId) {
-    constructor(row: UnknownFileRow) : this(File(row.absolutePath), SessionId(row.session))
-
-    val extension = file.extension
-}

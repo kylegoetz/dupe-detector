@@ -3,15 +3,9 @@ package photo.backup.kt.data
 import arrow.core.None
 import arrow.core.Option
 import arrow.core.Some
-import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.dao.UUIDEntity
-import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.UUIDTable
 import org.jetbrains.exposed.sql.Column
 import photo.backup.kt.SessionId
-import photo.backup.kt.domain.StageType
-import photo.backup.kt.domain.backup
-import photo.backup.kt.domain.source
 import java.io.File
 import java.util.UUID
 
@@ -34,8 +28,8 @@ sealed class FileEntity {
 object EntityFactory {
     fun build(row: MediaRow): FileEntity {
         val stage = when(row) {
-            is SourceRow -> source
-            is BackupRow -> backup
+            is SourceRow -> Source
+            is BackupRow -> Backup
         }
 
         return build(stage, File(row.absolutePath), row.hash?.run { Some(HashId(this)) } ?: None, row.type, SessionId(row.sessionId))
@@ -43,7 +37,7 @@ object EntityFactory {
 
     fun build(stage: StageType, file: File, hashId: Option<HashId>, type: Media, sessionId: SessionId): FileEntity {
         return when(stage) {
-            is source -> SourceFileEntity(
+            is Source -> SourceFileEntity(
                     absolutePath =file.canonicalPath,
                     hash =hashId,
                     size =file.length(),
@@ -51,7 +45,7 @@ object EntityFactory {
                     sessionId = sessionId,
                     type = type
             )
-            is backup -> GoogleFileEntity(
+            is Backup -> GoogleFileEntity(
                     absolutePath =file.canonicalPath,
                     hash =hashId,
                     size =file.length(),
