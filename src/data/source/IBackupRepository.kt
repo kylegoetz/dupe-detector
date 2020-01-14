@@ -4,13 +4,8 @@ import arrow.core.Either
 import arrow.core.Option
 import photo.backup.kt.SessionId
 import photo.backup.kt.data.*
-import photo.backup.kt.domain.StageType
 import java.io.File
 import java.util.*
-
-sealed class HashResult {
-    object SqliteConstraintUnique: HashResult()
-}
 
 interface IBackupRepository {
     fun disconnect()
@@ -21,25 +16,17 @@ interface IBackupRepository {
     suspend fun upsertFile(entity: FileEntity): MediaId
 
     // Hash
-//    suspend fun getHash(hashId: HashId): Option<HashEntity>
-    suspend fun addHash(hash: HashEntity): Either<HashResult, HashId>
     suspend fun getHashId(hash: Hash): Option<HashId>
     suspend fun getHash(id: HashId): Option<HashEntity>
     suspend fun upsertHash(hash: HashEntity): HashId
 
     // Backups
 //    suspend fun photoBackedUp(checksum: Hash): Boolean
-    suspend fun pathExists(path: File, isSource: Boolean): Option<UUID> // .canonicalPath  NOT .absolutePath
 
     // All
-    suspend fun deleteStaleBackupEntries(sessionId: SessionId)
-    suspend fun deleteStaleOriginalEntries(sessionId: SessionId)
-    suspend fun deleteStaleHashEntries(sessionId: SessionId)
     suspend fun renewHash(hashId: HashId, sessionId: SessionId)
     suspend fun getSourceImagesWithBackups(sessionId: SessionId): Either<Throwable, List<SourceFileEntity>>
 
-    suspend fun getCurrentEntities(sessionId: SessionId): List<SourceFileEntity>
-    suspend fun isFileChanged(canonicalPath: String, lastModified: Long): Boolean
     suspend fun getFileModificationDate(canonicalPath: String, stage: StageType): Option<Long>
 
     /**

@@ -15,9 +15,6 @@ import org.sqlite.SQLiteException
 import photo.backup.kt.SessionId
 import photo.backup.kt.data.*
 //import photo.backup.kt.data.SourceFileTable.absolutePath
-import photo.backup.kt.domain.StageType
-import photo.backup.kt.domain.backup
-import photo.backup.kt.domain.source
 import java.io.File
 import java.sql.Connection
 import java.util.*
@@ -43,10 +40,6 @@ object BackupRepository : IBackupRepository {
         }
 
         val dataSource = HikariDataSource(cfg)
-//        database =  database ?: when(type) {
-//            RepoType.TEST -> Database.connect("jdbc:sqlite::memory:", "org.sqlite.JDBC")
-//            RepoType.PROD -> Database.connect("jdbc:sqlite:$path", "org.sqlite.JDBC")
-//        }
         database = Database.connect(dataSource)
         TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
         transaction(database) {
@@ -124,8 +117,8 @@ object BackupRepository : IBackupRepository {
 
     override suspend fun getFileModificationDate(canonicalPath: String, stage: StageType): Option<Long> = transaction {
         val (row, table) = when(stage) {
-            is source -> Pair(SourceRow, SourceTable)
-            is backup -> Pair(BackupRow, BackupTable)
+            is Source -> Pair(SourceRow, SourceTable)
+            is Backup -> Pair(BackupRow, BackupTable)
         }
         row.find {
             table.absolutePath eq canonicalPath
@@ -137,8 +130,8 @@ object BackupRepository : IBackupRepository {
     override suspend fun getBackup(path: String, stageType: StageType): Option<FileEntity> = transaction {
         logger.trace { "Get backup $stageType for $path"}
         val (row, table) = when(stageType) {
-            is source -> Pair(SourceRow, SourceTable)
-            is backup -> Pair(BackupRow, BackupTable)
+            is Source -> Pair(SourceRow, SourceTable)
+            is Backup -> Pair(BackupRow, BackupTable)
         }
         row.find {
             table.absolutePath eq path
@@ -172,27 +165,10 @@ object BackupRepository : IBackupRepository {
         logger.trace { "Upserting a hash"}
         val hashes = HashRow.find { HashTable.hash eq entity.hash.value }
         when(hashes.count()) {
-            0 -> runBlocking {
-                (addHash(entity) as Either.Right).b // This will never be Left because in the same transaction we verify the hash cannot be a duplicate
-            }
+            0 -> addHash(entity)
             else -> hashes.forEach { it.sessionId = entity.sessionId.value }.run {
                 HashId(hashes.first().id.value)
             }
-        }
-    }
-
-    override suspend fun addHash(hash: HashEntity): Either<HashResult, HashId> {
-        logger.trace { "Adding a hash" }
-        return try {
-            transaction(database) {
-                HashTable.insert {
-                    it[this.hash] = hash.hash.value
-                    it[sessionId] = hash.sessionId.value
-                } get HashTable.id
-            }.run { Either.Right(HashId(this.value)) }
-        } catch(e: SQLiteException) {
-            logger.error("${e.message}")
-            Either.Left(HashResult.SqliteConstraintUnique)
         }
     }
 
@@ -221,52 +197,24 @@ object BackupRepository : IBackupRepository {
         HashRow.findById(hashId.value)?.sessionId = sessionId.value
     }
 
-    override suspend fun pathExists(path: File, isSource: Boolean): Option<UUID> = transaction {
-        when(isSource) {
-            true -> sourcePathExists(path).map { it.value }
-            false -> backupPathExists(path).map { it.value }
-        }
-    }
-
-    override suspend fun deleteStaleBackupEntries(sessionId: SessionId) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override suspend fun deleteStaleOriginalEntries(sessionId: SessionId) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override suspend fun deleteStaleHashEntries(sessionId: SessionId) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
+    /**
+     * Returns either an error or a list of source files that have the current sessionId and have backups corresponding with same session ID
+     */
     override suspend fun getSourceImagesWithBackups(sessionId: SessionId): Either<Throwable, List<SourceFileEntity>> = transaction {
         logger.trace { "Getting source image with backups" }
         Either.fx {
             val join = SourceTable.join(BackupTable, JoinType.INNER, SourceTable.hash, BackupTable.hash)
-            val query = join.select { SourceTable.sessionId eq sessionId.value }
+            val query = join.select { (SourceTable.sessionId eq sessionId.value) and (BackupTable.sessionId eq sessionId.value) }
             query.toList().map {
                 EntityFactory.build(
-                        source,
-                        File(it[SourceTable.absolutePath]),
-                        it[SourceTable.hash]?.run { Some(HashId(this)) } ?: None,
-                        it[SourceTable.type]
+                    Source,
+                    File(it[SourceTable.absolutePath]),
+                    it[SourceTable.hash]?.run { Some(HashId(this)) } ?: None,
+                    it[SourceTable.type],
+                    sessionId
                 ) as SourceFileEntity
             }
         }
-    }
-
-    override suspend fun getCurrentEntities(sessionId: SessionId): List<SourceFileEntity> = transaction {
-        SourceRow.find {
-            SourceTable.sessionId eq sessionId.value
-        }.map { EntityFactory.build(it) as SourceFileEntity }
-    }
-
-    override suspend fun isFileChanged(canonicalPath: String, lastModified: Long): Boolean = transaction {
-        !SourceRow.find {
-            SourceTable.absolutePath eq canonicalPath
-            SourceTable.dateModified eq lastModified
-        }.empty()
     }
 
     override suspend fun createUnknownFile(file: File, sessionId: SessionId): Either<RepositoryException, UUID> = transaction {
@@ -302,37 +250,28 @@ object BackupRepository : IBackupRepository {
         }
     }
 
-    private fun sourcePathExists(path: File): Option<SourcePhotoId> = transaction {
-        val result = SourceRow.find {
-            SourceTable.absolutePath eq path.canonicalPath
-        }
-        when(result.count()) {
-            0 -> None
-            else -> Some(SourcePhotoId(result.first().id.value))
-        }
-    }
-
-    private fun backupPathExists(path: File): Option<GooglePhotoId> = transaction {
-        val result = BackupRow.find {
-            BackupTable.absolutePath eq path.canonicalPath
-        }
-        when(result.count()) {
-            0 -> None
-            else -> Some(GooglePhotoId(result.first().id.value))
-        }
-    }
-
     /**
      * entries is a list of File
      */
     override suspend fun updateSessionIds(stage: StageType, entries: List<File>, session: SessionId): Int = transaction(database) {
         val table = when(stage) {
-            source -> SourceTable
-            backup -> BackupTable
+            Source -> SourceTable
+            Backup -> BackupTable
         }
         table.update({ table.absolutePath inList(entries.map {it.canonicalPath})}) {
             it[sessionId] = session.value
         }
+    }
+
+
+    private fun addHash(hash: HashEntity): HashId {
+        logger.trace { "Adding a hash" }
+        return transaction(database) {
+            HashTable.insert {
+                it[this.hash] = hash.hash.value
+                it[sessionId] = hash.sessionId.value
+            } get HashTable.id
+        }.run { HashId(this.value) }
     }
 }
 

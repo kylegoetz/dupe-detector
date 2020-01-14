@@ -1,9 +1,6 @@
-package data.source
+package photo.backup.kt.data.source
 
 import arrow.core.*
-import arrow.core.extensions.either.applicativeError.handleError
-import io.mockk.coVerify
-import io.mockk.spyk
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -16,8 +13,6 @@ import photo.backup.kt.data.*
 import photo.backup.kt.data.source.BackupRepository
 import photo.backup.kt.data.source.IBackupRepository
 import photo.backup.kt.data.source.RepoType
-import photo.backup.kt.domain.backup
-import photo.backup.kt.domain.source
 import java.io.File
 import java.util.*
 
@@ -103,7 +98,7 @@ internal class BackupRepositoryTest {
     @DisplayName("absolute path is preserved when inserting via backUp")
     fun backUpCorrectPath() {
         runBlocking { repo.backUp(backupEntity)}
-        val result = runBlocking { repo.getBackup(backupEntity.absolutePath, backup)}
+        val result = runBlocking { repo.getBackup(backupEntity.absolutePath, Backup)}
         assertTrue(result is Some<*>)
         assertEquals(backupEntity.absolutePath, (result as Some).t.absolutePath)
     }
@@ -144,9 +139,7 @@ internal class BackupRepositoryTest {
     fun upsertHashUpdates() = runBlocking {
         val entity = HashEntity(hash=Hash(""), sessionId=SessionId(UUID.randomUUID()))
         val updatedEntity = entity.copy(sessionId=sessionId)
-        val id: HashId = repo.addHash(entity).getOrHandle {
-            HashId(UUID.randomUUID())
-        }
+        val id: HashId = repo.upsertHash(entity)
         val secondId: HashId = repo.upsertHash(updatedEntity)
         assertEquals(id, secondId)
         val entityOpt: Option<HashEntity> = repo.getHash(secondId)
@@ -193,7 +186,7 @@ internal class BackupRepositoryTest {
         repo.upsertFile(sourceEntity)
         val result = repo.backedUp(sourceEntity)
         assertTrue(result is Some)
-        val ent = repo.getBackup(sourceEntity.absolutePath, source)
+        val ent = repo.getBackup(sourceEntity.absolutePath, Source)
         assertTrue(ent is Some)
         assertEquals(sourceEntity.sessionId, (ent as Some).t.sessionId)
     }
@@ -203,7 +196,7 @@ internal class BackupRepositoryTest {
     fun upsertFileUpdates() = runBlocking {
         repo.upsertFile(sourceEntity)
         repo.upsertFile(sourceEntity.copy(sessionId=SessionId(UUID.randomUUID())))
-        val entity = repo.getBackup(sourceEntity.absolutePath, source)
+        val entity = repo.getBackup(sourceEntity.absolutePath, Source)
         assertTrue(entity is Some)
         assertNotEquals(sourceEntity.sessionId, (entity as Some).t.sessionId)
     }
@@ -212,19 +205,16 @@ internal class BackupRepositoryTest {
     @DisplayName("Renew hash")
     fun renewHash() {
         val entity = HashEntity(Hash(""), sessionId)
-        val either = runBlocking { repo.addHash(entity) }
-        either.fold({
-            assertTrue(false, ("Insertion failed"))
-        }, {
-            val updated = entity.copy(id=Some(it), sessionId=SessionId(UUID.randomUUID()))
-            runBlocking { repo.renewHash(it, updated.sessionId) }
+        val id = runBlocking { repo.upsertHash(entity) }
 
-            val storedEntity = runBlocking { repo.getHash(it) }
-            storedEntity.fold({
-                assertTrue(false, "Failed to retrieve row")
-            }, {
-                assertEquals(it.sessionId, updated.sessionId)
-            })
+        val updated = entity.copy(id=Some(id), sessionId=SessionId(UUID.randomUUID()))
+        runBlocking { repo.renewHash(id, updated.sessionId) }
+
+        val storedEntity = runBlocking { repo.getHash(id) }
+        storedEntity.fold({
+            assertTrue(false, "Failed to retrieve row")
+        }, {
+            assertEquals(it.sessionId, updated.sessionId)
         })
     }
 
@@ -236,8 +226,8 @@ internal class BackupRepositoryTest {
         repo.backUp(sourceEntity.copy(absolutePath="/bar"))
         val newSession = SessionId(UUID.randomUUID())
 
-        val updated = repo.updateSessionIds(source, listOf(sourceEntity.absolutePath, "/foo", "/bar").map { File(it)}, newSession)
-        val checks = listOf(repo.getBackup(sourceEntity.absolutePath, source), repo.getBackup("/foo", source), repo.getBackup("/bar", source)).map {
+        val updated = repo.updateSessionIds(Source, listOf(sourceEntity.absolutePath, "/foo", "/bar").map { File(it)}, newSession)
+        val checks = listOf(repo.getBackup(sourceEntity.absolutePath, Source), repo.getBackup("/foo", Source), repo.getBackup("/bar", Source)).map {
             it.fold({
                 SessionId(UUID.randomUUID())
             },{
@@ -255,7 +245,7 @@ internal class BackupRepositoryTest {
     @Test
     @DisplayName("Batch updates session IDs for backup table")
     fun updatesSessionIdsBackupTable() {
-        runBlocking { repo.updateSessionIds(backup, emptyList(), sessionId) }
+        runBlocking { repo.updateSessionIds(Backup, emptyList(), sessionId) }
     }
 
     @Test
@@ -274,5 +264,30 @@ internal class BackupRepositoryTest {
             assertEquals(1, it.size)
         })
 
+    }
+
+    @Test
+    @DisplayName("Returns entry.dateModified for Source Entity")
+    fun sourceDateModified() = runBlocking {
+        val date = 100L
+        repo.upsertFile(sourceEntity.copy(dateModified=date))
+        val result = repo.getFileModificationDate(sourceEntity.absolutePath, Source)
+        assertEquals(Some(date), result)
+    }
+
+    @Test
+    @DisplayName("Returns entry.dateModified for Backup Entity")
+    fun backupDateModified() = runBlocking {
+        val date = 100L
+        repo.upsertFile(backupEntity.copy(dateModified=date))
+        val result = repo.getFileModificationDate(backupEntity.absolutePath, Backup)
+        assertEquals(Some(date), result)
+    }
+
+    @Test
+    @DisplayName("Returns None for non-existent path")
+    fun nothingDateModified() {
+        val result = runBlocking { repo.getFileModificationDate(backupEntity.absolutePath, Backup) }
+        assertEquals(None, result)
     }
 }
