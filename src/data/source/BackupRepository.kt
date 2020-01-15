@@ -154,7 +154,16 @@ object BackupRepository : IBackupRepository {
             id
         },{
             val id = it.id.value
-            val updatedEntity = entity.changeId(id)
+            val newHash = when(entity.dateModified != it.dateModified) {
+                true -> { entity.hash }
+                false -> {
+                    when(it.hash == null) {
+                        true -> entity.hash
+                        false -> Option.fromNullable(it.hash).map{HashId(it)}
+                    }
+                }
+            }
+            val updatedEntity = entity.changeId(id).changeHashId(newHash)
             logger.trace { "upsert - updating ${updatedEntity.absolutePath} for session ${updatedEntity.sessionId}"}
             runBlocking { update(updatedEntity) }
             updatedEntity.id

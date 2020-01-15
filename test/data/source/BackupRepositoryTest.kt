@@ -290,4 +290,44 @@ internal class BackupRepositoryTest {
         val result = runBlocking { repo.getFileModificationDate(backupEntity.absolutePath, Backup) }
         assertEquals(None, result)
     }
+
+    @Test
+    @DisplayName("upsert file preserves existing hash if modification date hasn't changed")
+    fun preserveExistingHash() = runBlocking {
+        repo.upsertFile(sourceEntity.copy(hash=Some(HashId(UUID.randomUUID()))))
+        repo.upsertFile(sourceEntity)
+        val result = repo.getBackup(sourceEntity.absolutePath, Source)
+        result.fold({
+            assertTrue(false, "File not found")
+        },{
+            assertTrue(it.hash is Some)
+        })
+    }
+
+    @Test
+    @DisplayName("upsert file overwrites hashid of None if new version has a HashId and modification date hasn't changed")
+    fun overwriteNoneHash() = runBlocking {
+        repo.upsertFile(sourceEntity)
+        repo.upsertFile(sourceEntity.copy(hash=Some(HashId(UUID.randomUUID()))))
+        val result = repo.getBackup(sourceEntity.absolutePath, Source)
+        result.fold({
+            assertTrue(false, "File not found")
+        },{
+            assertTrue(it.hash is Some)
+        })
+    }
+
+    @Test
+    @DisplayName("upsert file overwrites existing hash if modification date has changed")
+    fun doesNotPreserveHash() = runBlocking {
+        val expectedHashId = HashId(UUID.randomUUID())
+        repo.upsertFile(sourceEntity.copy(hash=Some(HashId(UUID.randomUUID()))))
+        repo.upsertFile(sourceEntity.copy(hash=Some(expectedHashId), dateModified=sourceEntity.dateModified+1))
+        val result = repo.getBackup(sourceEntity.absolutePath, Source)
+        result.fold({
+            assertTrue(false, "File not found")
+        },{
+            assertEquals(Some(expectedHashId), it.hash)
+        })
+    }
 }
