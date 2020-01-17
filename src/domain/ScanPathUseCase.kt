@@ -47,3 +47,4 @@ fun scanVideo(root: String, walker: (File)->Sequence<File>): IO<Sequence<File>> 
 }
 
 typealias ScanVideoUseCase = (String, (File)->Sequence<File>) -> IO<Sequence<File>>
+typealias ScanVideoUseCaseWrapper = (String) -> IO<Sequence<File>>
