@@ -6,7 +6,7 @@ import photo.backup.kt.IMAGE_EXTENSIONS
 import photo.backup.kt.domain.`in`
 import java.io.File
 
-val walker: (File) -> Sequence<File> = {
+val imageWalker: (File) -> Sequence<File> = {
     it.walk().onEnter { dir ->
         logger.debug { "Scanning for files in $dir" }
         FORBIDDEN_PATHS.all { !dir.canonicalPath.endsWith(it) }

@@ -4,35 +4,14 @@
 package photo.backup.kt
 
 import arrow.core.*
-import arrow.core.extensions.fx
-import arrow.fx.IO
-import arrow.fx.extensions.fx
-import arrow.fx.extensions.io.applicative.applicative
-import arrow.fx.fix
-import ch.frankel.slf4k.debug
-import ch.frankel.slf4k.error
-import ch.frankel.slf4k.info
-import ch.frankel.slf4k.trace
-import ch.qos.logback.classic.LoggerContext
-import ch.qos.logback.core.util.StatusPrinter
 import org.slf4j.LoggerFactory
-import photo.backup.kt.data.*
 import photo.backup.kt.data.source.IBackupRepository
 import photo.backup.kt.data.source.BackupRepository
 import photo.backup.kt.data.source.RepoType
 import photo.backup.kt.domain.*
 import photo.backup.kt.util.*
-import java.awt.image.BufferedImage
 import java.io.File
-import java.nio.ByteBuffer
-import java.nio.file.Files
-import java.nio.file.Files.createDirectories
-import java.nio.file.Path
-import java.security.MessageDigest
 import java.util.*
-import javax.imageio.ImageIO
-import javax.xml.bind.DatatypeConverter
-import kotlin.system.measureTimeMillis
 
 inline class SessionId(val value: UUID)
 
@@ -204,7 +183,7 @@ fun main(args: Array<String>) {
 
     val runner = createRunner(
         sessionId,
-        { scanVideo(it, walker) },
+        { scanVideo(it, videoWalker) },
         generateStoreVideoUseCase(repository, sessionId, ::generateMD5),
         generateShouldStoreBackupVideoUseCase(repository, sessionId, ::generateMD5)
     )
@@ -217,7 +196,7 @@ fun main(args: Array<String>) {
 //            generateStoreVideoUseCase(repository, sessionId, ::generateMD5),
 //            generateShouldStoreBackupVideoUseCase(repository, sessionId, ::generateMD5),
             runner,
-            generateScanDirectoryUseCase { walker(File(it)) },
+            generateScanDirectoryUseCase { imageWalker(File(it)) },
             generateStoreUnknownFileRefUseCase(repository, sessionId),
             generateNeedToUpdateHashUseCase(repository),
             generateGetImageDataUseCase(::imageReader),
