@@ -21,7 +21,7 @@ import photo.backup.kt.data.source.IBackupRepository
 import photo.backup.kt.data.source.BackupRepository
 import photo.backup.kt.data.source.RepoType
 import photo.backup.kt.domain.*
-import photo.backup.kt.photo.backup.kt.domain.RenewFileUseCase
+import photo.backup.kt.util.*
 import java.awt.image.BufferedImage
 import java.io.File
 import java.nio.ByteBuffer
@@ -200,7 +200,30 @@ val FORBIDDEN_PATHS = listOf(".@__thumb", ".aplibrary", ".git", "node_modules")
 //}
 
 fun main(args: Array<String>) {
-    main(args[0], args[1], args[2])
+    val sessionId = SessionId(UUID.randomUUID())
+
+    val runner = createRunner(
+        sessionId,
+        { scanVideo(it, walker) },
+        generateStoreVideoUseCase(repository, sessionId, ::generateMD5),
+        generateShouldStoreBackupVideoUseCase(repository, sessionId, ::generateMD5)
+    )
+
+    argsParser(args).map {
+        main(it, UseCases(
+            generateBatchUpdateSession(repository, sessionId),
+            generateListDupesUseCase(repository, sessionId),
+            generateMoveFileUseCase(::mover),
+            generateStoreVideoUseCase(repository, sessionId, ::generateMD5),
+            generateShouldStoreBackupVideoUseCase(repository, sessionId, ::generateMD5),
+            runner,
+            generateScanDirectoryUseCase { walker(File(it)) },
+            generateStoreUnknownFileRefUseCase(repository, sessionId),
+            generateNeedToUpdateHashUseCase(repository),
+            generateGetImageDataUseCase(::imageReader),
+            generateComputeHashUseCase(repository, calculateHash, sessionId),
+            generateSavePhotoUseCase(repository, sessionId)))
+    }
 }
 
 //fun main(args: Array<String>) {

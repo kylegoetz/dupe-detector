@@ -56,27 +56,6 @@ class AppTest {
     }
 }
 //
-//import arrow.core.*
-//import arrow.core.Either.Companion.left
-//import arrow.fx.IO
-//import io.mockk.MockKAnnotations
-//import io.mockk.coEvery
-//import io.mockk.coVerify
-//import io.mockk.*
-//import io.mockk.impl.annotations.MockK
-//import org.junit.jupiter.api.Assertions.*
-//import org.junit.jupiter.api.BeforeEach
-//import org.junit.jupiter.api.DisplayName
-//import org.junit.jupiter.api.Test
-//import org.slf4j.LoggerFactory
-//import photo.backup.kt.data.*
-//import photo.backup.kt.data.source.IBackupRepository
-//import photo.backup.kt.domain.*
-//import java.io.File
-//import java.util.*
-//import ch.frankel.slf4k.*
-//import photo.backup.kt.photo.backup.kt.domain.RenewFileUseCase
-//
 //private const val SOURCE_PATH = "/path/to/source"
 //private const val BACKUP_PATH = "/path/to/backup"
 //
