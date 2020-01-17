@@ -35,6 +35,11 @@ object EntityFactory {
         return build(stage, File(row.absolutePath), row.hash?.run { Some(HashId(this)) } ?: None, row.type, SessionId(row.sessionId))
     }
 
+    /**
+     * Try to use this as little as possible since it doesn't have a session ID
+     */
+    fun build(stage: StageType, file: File, hashId: Option<HashId>, type: Media) = build(stage, file, hashId, type, SessionId(UUID.randomUUID()))
+
     fun build(stage: StageType, file: File, hashId: Option<HashId>, type: Media, sessionId: SessionId): FileEntity {
         return when(stage) {
             is Source -> SourceFileEntity(
