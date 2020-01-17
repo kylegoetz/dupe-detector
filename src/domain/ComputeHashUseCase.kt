@@ -5,12 +5,10 @@ import arrow.core.Some
 import arrow.fx.IO
 import arrow.fx.extensions.io.monad.flatten
 import photo.backup.kt.SessionId
-import photo.backup.kt.data.FileEntity
-import photo.backup.kt.data.Hash
-import photo.backup.kt.data.HashEntity
-import photo.backup.kt.data.HashId
+import photo.backup.kt.data.*
 import photo.backup.kt.data.source.IBackupRepository
 
+typealias ComputeHashUseCase = (ByteArray, String, Long, StageType) -> IO<HashId>
 fun generateComputeHashUseCase(repository: IBackupRepository,
                                hashFn: (ByteArray)->Hash,
                                sessionId: SessionId): (ByteArray, String, Long, StageType)->IO<HashId> {

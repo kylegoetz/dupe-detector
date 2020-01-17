@@ -3,6 +3,7 @@ package photo.backup.kt.domain
 import arrow.fx.IO
 import ch.frankel.slf4k.trace
 import org.slf4j.LoggerFactory
+import photo.backup.kt.data.StageType
 import photo.backup.kt.data.source.IBackupRepository
 import java.io.File
 

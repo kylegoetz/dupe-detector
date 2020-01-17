@@ -2,6 +2,7 @@ package photo.backup.kt.domain
 
 import arrow.fx.IO
 import photo.backup.kt.SessionId
+import photo.backup.kt.data.StageType
 import photo.backup.kt.data.source.IBackupRepository
 import java.io.File
 

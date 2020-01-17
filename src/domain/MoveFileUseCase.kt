@@ -9,10 +9,12 @@ import java.nio.file.Path
 import ch.frankel.slf4k.*
 import org.slf4j.Logger
 
-typealias MoveFileUseCase = (SourceFileEntity)->IO<Either<Throwable, Path>>
+typealias MoveFileUseCase = (String, SourceFileEntity)->IO<Either<Throwable, Path>>
 
-fun generateMoveFileUseCase(targetPath: String, mover: (String, File)->IO<Either<Throwable, Path>>): (SourceFileEntity)->IO<Either<Throwable, Path>> = {
-    mover(targetPath, File(it.absolutePath))
+fun generateMoveFileUseCase(mover: (String, File)->IO<Either<Throwable, Path>>): (String, SourceFileEntity)->IO<Either<Throwable, Path>> {
+    return { targetPath: String, entity: SourceFileEntity ->
+        mover(targetPath, File(entity.absolutePath))
+    }
 }
 
 @Suppress("UNUSED_PARAMETER")

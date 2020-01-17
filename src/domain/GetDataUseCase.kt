@@ -20,14 +20,3 @@ fun generateGetImageDataUseCase(imageReader: (File)->IO<Either<Throwable, ByteAr
 typealias GetImageDataUseCase = (File, Media) -> IO<Either<Throwable, ByteArray>>
 
 private val logger = LoggerFactory.getLogger("test")
-//class GetDataUseCase(val imageReader: suspend (File)-> IO<Either<Throwable, ByteArray>>, val videoReader: (File)->IO<Either<Throwable, ByteArray>>) {
-//    operator fun invoke(params: Params): IO<Either<Throwable, ByteArray>> = IO.fx {
-//        logger.trace { "Reading in file ${params.file.canonicalPath}" }
-//        when(params.type) {
-//            Media.IMAGE -> !effect { imageReader(params.file) }.bind()
-//            Media.VIDEO -> videoReader(params.file).bind()
-//        }
-//    }
-//
-//    data class Params(val file: File, val type: Media)
-//}
