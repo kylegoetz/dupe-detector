@@ -12,8 +12,7 @@ import photo.backup.kt.data.*
 import java.util.UUID
 
 
-class SaveSourcePhotoBackupUseCaseTest: BaseUseCaseTest<SavePhotoUseCase>() {
-    private val sessionId = SessionId(UUID.randomUUID())
+class SavePhotoUseCaseTest: BaseUseCaseTest<SavePhotoUseCase>() {
     private val id = SourcePhotoId(UUID.randomUUID())
 
     override lateinit var SUT: SavePhotoUseCase

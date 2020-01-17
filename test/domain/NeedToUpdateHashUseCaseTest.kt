@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import photo.backup.kt.data.Source
 import java.io.File
 
 class NeedToUpdateHashUseCaseTest: BaseUseCaseTest<NeedToUpdateHashUseCase>() {
@@ -25,7 +26,7 @@ class NeedToUpdateHashUseCaseTest: BaseUseCaseTest<NeedToUpdateHashUseCase>() {
     fun noFileInDb() {
         coEvery { repo.getFileModificationDate(any(), any())} returns None
 
-        val result = SUT(file, source).unsafeRunSync()
+        val result = SUT(file, Source).unsafeRunSync()
 
         assertEquals(true, result)
     }
@@ -36,7 +37,7 @@ class NeedToUpdateHashUseCaseTest: BaseUseCaseTest<NeedToUpdateHashUseCase>() {
         coEvery { repo.getFileModificationDate(any(), any()) } returns Some(0)
         coEvery { file.lastModified() } returns 1
 
-        val result = SUT(file, source).unsafeRunSync()
+        val result = SUT(file, Source).unsafeRunSync()
 
         assertEquals(true, result)
     }
@@ -47,7 +48,7 @@ class NeedToUpdateHashUseCaseTest: BaseUseCaseTest<NeedToUpdateHashUseCase>() {
         coEvery { repo.getFileModificationDate(any(), any())} returns Some(0)
         coEvery { file.lastModified() } returns 0
 
-        val result = SUT(file, source).unsafeRunSync()
+        val result = SUT(file, Source).unsafeRunSync()
 
         assertEquals(false, result)
     }

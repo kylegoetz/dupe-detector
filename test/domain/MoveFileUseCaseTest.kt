@@ -10,21 +10,23 @@ import java.nio.file.Path
 import kotlin.test.assertTrue
 
 class MoveFileUseCaseTest : BaseUseCaseTest<MoveFileUseCase>() {
-    override lateinit var case: MoveFileUseCase
+    override lateinit var SUT: MoveFileUseCase
+
+    override fun configureSUT() {}
 
     @Test
     @DisplayName("it returns Right if file move successful")
     fun moveSuccessful() {
-        case = generateMoveFileUseCase("", ::successfulMover)
-        val result = case(sourceEntity).unsafeRunSync()
+        SUT = generateMoveFileUseCase(::successfulMover)
+        val result = SUT("", sourceEntity).unsafeRunSync()
         assertTrue(result is Either.Right)
     }
 
     @Test
     @DisplayName("it returns Left if file move threw")
     fun moveUnsuccessful() {
-        case = generateMoveFileUseCase(File("").canonicalPath, ::failedMover)
-        val result = case(sourceEntity).unsafeRunSync()
+        SUT = generateMoveFileUseCase(::failedMover)
+        val result = SUT("", sourceEntity).unsafeRunSync()
         assertTrue(result is Either.Left)
     }
 

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import photo.backup.kt.SessionId
+import photo.backup.kt.data.Source
 import java.io.File
 
 class BatchUpdateSessionUseCaseTest: BaseUseCaseTest<BatchUpdateSessionUseCase>() {
@@ -20,9 +21,9 @@ class BatchUpdateSessionUseCaseTest: BaseUseCaseTest<BatchUpdateSessionUseCase>(
     fun emptyListNoCall() {
         coEvery { repo.updateSessionIds(any(), any(), sessionId) } returns 0
 
-        SUT(source, emptyList()).unsafeRunSync()
+        SUT(Source, emptyList()).unsafeRunSync()
 
-        coVerify(exactly=0) { repo.updateSessionIds(source, any(), sessionId) }
+        coVerify(exactly=0) { repo.updateSessionIds(Source, any(), sessionId) }
     }
 
     @Test
@@ -31,8 +32,8 @@ class BatchUpdateSessionUseCaseTest: BaseUseCaseTest<BatchUpdateSessionUseCase>(
         coEvery { repo.updateSessionIds(any(), any(), sessionId) } returns 0
         val fileList = listOf(File(""))
 
-        SUT(source, fileList).unsafeRunSync()
+        SUT(Source, fileList).unsafeRunSync()
 
-        coVerify { repo.updateSessionIds(source, fileList, sessionId) }
+        coVerify { repo.updateSessionIds(Source, fileList, sessionId) }
     }
 }
