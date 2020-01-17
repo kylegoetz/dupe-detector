@@ -81,7 +81,7 @@ class IntegrationTest {
             "Photo 3: in backup, not in dest\n" +
             "Photo 4: in backup and dest, not in source")
     fun doesEverythingRight() {
-        appMain(arrayOf(sourcePath, backupPath, destPath).map { it.canonicalPath}.toTypedArray())
+        appMain(arrayOf(sourcePath, backupPath, destPath).map { it.canonicalPath}.toTypedArray(), true)
 
         assertFalse(files["video 1 source"]!!.exists())
         assertTrue(files["video 1 backup"]!!.exists())
