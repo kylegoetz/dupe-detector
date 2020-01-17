@@ -47,10 +47,10 @@
 <!--        <appender-ref ref="rollingLog"/>-->
 <!--        <appender-ref ref="ERROR"/>-->
     </root>
-    <logger name="timeBased" level="INFO">
-        <appender-ref ref="rollingLog"/>
-    </logger>
-    <logger name="test" level="TRACE">
+<!--    <logger name="timeBased" level="INFO">-->
+<!--        <appender-ref ref="rollingLog"/>-->
+<!--    </logger>-->
+    <logger name="test" level="INFO">
         <appender-ref ref="repository"/>
         <appender-ref ref="rollingLog"/>
         <appender-ref ref="ERROR"/>
