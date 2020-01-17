@@ -21,8 +21,8 @@ class FunctionalTest {
     @MockK private lateinit var batchUpdateSessions: BatchUpdateSessionUseCase
     @MockK private lateinit var getDupes: ListDupesUseCase
     @MockK private lateinit var moveFile: MoveFileUseCase
-    @MockK private lateinit var storeVideo: StoreVideoUseCase
-    @MockK private lateinit var shouldStoreVideo: ShouldStoreBackupVideoUseCase
+//    @MockK private lateinit var storeVideo: StoreVideoUseCase
+//    @MockK private lateinit var shouldStoreVideo: ShouldStoreBackupVideoUseCase
     @MockK private lateinit var videoRunner: VideoRunnerUseCase
     @MockK private lateinit var scanDirectory: ScanDirectoryUseCase
     @MockK private lateinit var storeUnknownFile: StoreUnknownFileRefUseCase
@@ -42,8 +42,8 @@ class FunctionalTest {
             batchUpdateSessions,
             getDupes,
             moveFile,
-            storeVideo,
-            shouldStoreVideo,
+//            storeVideo,
+//            shouldStoreVideo,
             videoRunner,
             scanDirectory,
             storeUnknownFile,
