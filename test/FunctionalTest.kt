@@ -233,5 +233,15 @@ class FunctionalTest {
         assertEquals(listOf(files[0]), slot.captured)
     }
 
+    @Test
+    @DisplayName("videoRunner is executed")
+    fun videoRunner() {
+        val paths = PathArgs(None, None, None)
+
+        SUT(paths, useCases)
+
+        verify { videoRunner(paths) }
+    }
+
 
 }
