@@ -41,7 +41,7 @@ fun main(
         val program = IO.fx {
             paths.source.traverse(IO.applicative()) { processPath(useCases, batchUpdateSessions, it.canonicalPath, Source) }.bind()
             paths.backup.traverse(IO.applicative()) { processPath(useCases, batchUpdateSessions, it.canonicalPath, Backup) }.bind()
-            videoRunner(paths).bind()
+            videoRunner(paths).bind().fix().map { it.count() }
             paths.destination.traverse(IO.applicative()) { dest ->
                 moveDupeFiles(dest, getDupes, moveFile)
             }.bind()
