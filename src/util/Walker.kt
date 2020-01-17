@@ -20,4 +20,9 @@ val walker: (File) -> Sequence<File> = {
     }
 }
 
+val videoWalker: (File) -> Sequence<File> = {
+    it.walk().onEnter { dir ->
+        FORBIDDEN_PATHS.all { !dir.canonicalPath.endsWith(it) }
+    }
+}
 private val logger = LoggerFactory.getLogger("test")
